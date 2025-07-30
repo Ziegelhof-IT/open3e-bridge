@@ -1,0 +1,425 @@
+# Open3E Datenpunkt-Definitionen - TEST VERSION
+# Community-maintained - kann direkt editiert werden
+
+datapoints:
+  # TEST: Nur 2 Datenpunkte für ersten Test
+  
+  268:  # FlowTemperatureSensor - Multi-Value Sensor
+    type: "temperature_sensor"
+    name_key: "flow_temperature"
+    subs:
+      Actual: { type: "current" }
+      Minimum: { type: "min" }
+      Maximum: { type: "max" }
+      Average: { type: "avg" }
+      Unknown: { type: "unknown", enabled: false }
+
+  269:  # ReturnTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "return_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  274:  # OutsideTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "outside_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  318:  # WaterPressureSensor
+    type: "pressure_sensor"
+    name_key: "water_pressure"
+    subs:
+      Actual: { type: "current" }
+
+  271:  # DomesticHotWaterSensor
+    type: "temperature_sensor"
+    name_key: "dhw_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  # Mixer circuit flow temperatures (Actual only for dashboard)
+  284:  # MixerOneCircuitFlowTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "mixer1_flow_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  286:  # MixerTwoCircuitFlowTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "mixer2_flow_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  # Heating buffer temperatures (if present)
+  277:  # BufferBottomTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "buffer_bottom_temperature"
+    subs:
+      Actual: { type: "current" }
+  279:  # BufferMidTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "buffer_mid_temperature"
+    subs:
+      Actual: { type: "current" }
+  281:  # BufferTopTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "buffer_top_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  # Power and thermal capacity (for dashboards and COP calcs)
+  2496:  # CurrentThermalCapacitySystem (W)
+    type: "power_sensor"
+    name_key: "thermal_power_system"
+
+  1603:  # PointOfCommonCouplingPower
+    type: "power_sensor"
+    name_key: "grid_active_power"
+    subs:
+      ActivePower: { type: "current" }
+
+  # Electrical energy totals (counters)
+  535:  # ObjectElectricalEnergyStatistical
+    type: "energy_sensor"
+    name_key: "electrical_energy_stats"
+    subs:
+      GridSuppliedEnergy: { }
+      ProducedEnergy: { }
+      GridFeedInEnergy: { }
+
+  377:  # IdentNumber - für Device-Erkennung
+    type: "device_info"
+    name_key: "device_ident"
+    extract_serial: true
+
+  396:  # DomesticHotWaterTemperatureSetpoint - Writable Setpoint
+    type: "temperature_setpoint"
+    name_key: "dhw_setpoint"
+    min: 10
+    max: 65
+    step: 0.5
+    writable: true
+    write_mode: "write"
+
+  # Vitocal 250 – einfache Migrationen aus manueller HA-Konfiguration
+  2442:  # HeatPumpFrostProtection
+    type: "binary_onoff"
+    name_key: "heat_pump_frost_protection"
+    # Viele Geräte senden 0.0/1.0
+    payload_off: "0.0"
+    payload_on: "1.0"
+
+  401:  # MixerOneCircuitPump (HK1 Pumpenstatus)
+    type: "binary_onoff"
+    name_key: "mixer1_pump"
+    icon: "mdi:pump"
+    payload_off: "0.0"
+    payload_on: "1.0"
+
+  2488:  # CurrentElectricalPowerConsumptionSystem
+    type: "power_sensor"
+    name_key: "power_consumption_system"
+
+  1775:  # PrimaryCircuitFanOne (%) 
+    type: "pump_sensor"
+    name_key: "primary_circuit_fan_one"
+
+  1776:  # PrimaryCircuitFanTwo (%)
+    type: "pump_sensor"
+    name_key: "primary_circuit_fan_two"
+
+  # Beispiel für eine einfache schreibbare Zahl (aus manueller config 2626)
+  2626:  # MaximumPowerElectricalHeater (W)
+    type: "power_sensor"
+    name_key: "max_power_electric_heater"
+    writable: true
+    min: 0
+    max: 8000
+    step: 100
+    # HA führt diese Jinja aus und sendet JSON an open3e/cmnd
+    command_template: >
+      {% set intvalue = value | int %}
+      {% set cmddata = '%02x' % (intvalue % 256) + '%02x' % (intvalue // 256) + '0000' %}
+      {% set cmd = {'mode': 'write-raw', 'data': [[2626, cmddata]]} %}
+      {{ cmd | to_json }}
+
+  # Weitere Binary-Sensoren nach Vorlage
+  2855:  # HK1 Frostschutz-Konfiguration
+    type: "binary_onoff"
+    name_key: "mixer1_frost_protection"
+    payload_off: "0.0"
+    payload_on: "1.0"
+
+  2856:  # HK2 Frostschutz-Konfiguration
+    type: "binary_onoff"
+    name_key: "mixer2_frost_protection"
+    payload_off: "0.0"
+    payload_on: "1.0"
+
+  402:  # MixerTwoCircuitPump (HK2 Pumpenstatus)
+    type: "binary_onoff"
+    name_key: "mixer2_pump"
+    icon: "mdi:pump"
+    payload_off: "0.0"
+    payload_on: "1.0"
+
+  2351:  # HeatPumpCompressor
+    type: "binary_onoff"
+    name_key: "compressor_status"
+    payload_off: "0.0"
+    payload_on: "1.0"
+
+  2352:  # AdditionalElectricHeater
+    type: "binary_onoff"
+    name_key: "additional_heater_status"
+    payload_off: "0000"
+    payload_on: "0100"
+
+  # Temperatur-Sensoren mit /Actual
+  1770:  # SecondaryOutletTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "secondary_outlet_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  1771:  # EngineRoomTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "engine_room_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  2333:  # EconomizerLiquidTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "economizer_liquid_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  2334:  # EvaporatorVaporTemperatureSensor
+    type: "temperature_sensor"
+    name_key: "evaporator_vapor_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  # EMS Resulting Control State mit Mapping
+  2350:  # EnergyManagmentSystemResultingControlState
+    type: "generic_sensor"
+    name_key: "ems_resulting_control_state"
+    icon: "mdi:home-variant"
+    value_template: >
+      {% set ostate = int(value) %}
+      {% if ostate==1 %}
+        {{ "Abschaltbetrieb" }}
+      {% elif ostate==2 %}
+        {{ "Normalbetrieb" }}
+      {% elif ostate==3 %}
+        {{ "Bevorzugter Betrieb" }}
+      {% elif ostate==4 %}
+        {{ "Erzwungener Betrieb" }}
+      {% else %}
+        {{ value }}
+      {% endif %}
+
+  # Heizkreis 1 Pumpe: Setpoint via 1102
+  1102:  # MixerOneCircuitPumpMinimumMaximumLimit
+    type: "pump_sensor"
+    name_key: "mixer1_pump"
+    subs:
+      Setpoint:
+        entity_type: "number"
+        writable: true
+        min: 20
+        max: 100
+        step: 5
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
+        command_template: >
+          {% set intvalue = value | int %}
+          {% set cmddata = '14' + '%0x' % intvalue + '%0x' % intvalue %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1102, cmddata]]} %}
+          {{ cmd | to_json }}
+
+  # Heizkreis 1 Vorlauf Min/Max via 1192
+  1192:  # MixerOneCircuitFlowTemperatureMinimumMaximumLimit
+    type: "temperature_setpoint"
+    name_key: "mixer1_flow_temperature"
+    subs:
+      Minimum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmax = min(max(states('sensor.1192_mixeronecircuitflowtemperature_maximum') | int * 10,100),600) %}
+          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
+          {{ cmd | to_json }}
+
+      Maximum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmin = min(max(states('sensor.1192_mixeronecircuitflowtemperature_minimum') | int * 10,100),600) %}
+          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
+          {{ cmd | to_json }}
+
+  # Heizkreis 2 Pumpe: Setpoint via 1103
+  1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
+    type: "pump_sensor"
+    name_key: "mixer2_pump"
+    subs:
+      Setpoint:
+        entity_type: "number"
+        writable: true
+        min: 20
+        max: 100
+        step: 5
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
+        command_template: >
+          {% set intvalue = value | int %}
+          {% set cmddata = '1464' + '%0x' % intvalue %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
+          {{ cmd | to_json }}
+
+  # Heizkreis 1/2 Betriebsmodi: off/auto als Select
+  1415:  # MixerOneCircuitOperationState
+    type: "select_mode"
+    name_key: "mixer1_operation_mode"
+    subs:
+      Mode/ID:
+        entity_type: "select"
+        options: ["off", "auto"]
+        value_template: "{{ 'off' if (value | int(0)) == 0 else 'auto' }}"
+        command_template: >
+          {% set values = { 'auto':'0102', 'off':'0000'} %}
+          {% set cmd = {'mode': 'write-raw', 'data':[[1415, values[value]]]} %}
+          {{ cmd | to_json }}
+    climate:
+      name_key: "mixer1_climate"
+      trigger_sub: "Mode/ID"
+      modes: ["off", "auto"]
+      mode_state_template: "{{ 'off' if (value_json | int(0)) == 0 else 'auto' }}"
+      mode_command_template: >
+        {% set values = { 'auto':'0102', 'off':'0000'} %}
+        {% set cmd = {'mode': 'write-raw', 'data':[[1415, values[value]]]} %}
+        {{ cmd | to_json }}
+      temperature_did: 1643
+      temperature_did_name: "MixerOneCircuitCurrentTemperatureSetpoint"
+      min_temp: 3
+      max_temp: 37
+      precision: 1.0
+      temperature_unit: "C"
+      temperature_command_template: >
+        {% set value_target = (value*10) | int %}
+        {% set hk1_bp = states('sensor.1415_mixeronecircuitoperationstate') %}
+        {% if (hk1_bp=="Komfort") %}
+        {% set value_com = min(max(30, value_target),370) %}
+        {% set value_sta = min(max(30, value_target-20),370) %}
+        {% set value_red = min(max(30, value_target-40),370) %}
+        {% elif (hk1_bp=="Reduziert") or (hk1_bp=="Frostschutz") or (hk1_bp=="Abschaltbetrieb") %}
+        {% set value_com = min(max(30, value_target+40),370) %}
+        {% set value_sta = min(max(30, value_target+20),370) %}
+        {% set value_red = min(max(30, value_target),370) %}
+        {% else %}
+        {% set value_com = min(max(30, value_target+20),370) %}
+        {% set value_sta = min(max(30, value_target),370) %}
+        {% set value_red = min(max(30, value_target-20),370) %}
+        {% endif %}
+        {% set cmddata = '%02x' % (value_com % 256) + '%02x' % (value_com // 256) + '%02x' % (value_sta % 256) + '%02x' % (value_sta // 256) + '%02x' % (value_red % 256) + '%02x' % (value_red // 256) + '000000' %}
+        {% set cmd = {'mode': 'write-raw', 'data':[[424, cmddata]]} %}
+        {{ cmd | to_json }}
+
+  1416:  # MixerTwoCircuitOperationState
+    type: "select_mode"
+    name_key: "mixer2_operation_mode"
+    subs:
+      Mode/ID:
+        entity_type: "select"
+        options: ["off", "auto"]
+        value_template: "{{ 'off' if (value | int(0)) == 0 else 'auto' }}"
+        command_template: >
+          {% set values = { 'auto':'0102', 'off':'0000'} %}
+          {% set cmd = {'mode': 'write-raw', 'data':[[1416, values[value]]]} %}
+          {{ cmd | to_json }}
+    climate:
+      name_key: "mixer2_climate"
+      trigger_sub: "Mode/ID"
+      modes: ["off", "auto"]
+      mode_state_template: "{{ 'off' if (value_json | int(0)) == 0 else 'auto' }}"
+      mode_command_template: >
+        {% set values = { 'auto':'0102', 'off':'0000'} %}
+        {% set cmd = {'mode': 'write-raw', 'data':[[1416, values[value]]]} %}
+        {{ cmd | to_json }}
+      temperature_did: 1644
+      temperature_did_name: "MixerTwoCircuitCurrentTemperatureSetpoint"
+      min_temp: 3
+      max_temp: 37
+      precision: 1.0
+      temperature_unit: "C"
+      temperature_command_template: >
+        {% set value_target = (value*10) | int %}
+        {% set hk2_bp = states('sensor.1416_mixertwocircuitoperationstate') %}
+        {% if (hk2_bp=="Komfort") %}
+        {% set value_com = min(max(30, value_target),370) %}
+        {% set value_sta = min(max(30, value_target-20),370) %}
+        {% set value_red = min(max(30, value_target-40),370) %}
+        {% elif (hk2_bp=="Reduziert") or (hk2_bp=="Frostschutz") or (hk2_bp=="Abschaltbetrieb") %}
+        {% set value_com = min(max(30, value_target+40),370) %}
+        {% set value_sta = min(max(30, value_target+20),370) %}
+        {% set value_red = min(max(30, value_target),370) %}
+        {% else %}
+        {% set value_com = min(max(30, value_target+20),370) %}
+        {% set value_sta = min(max(30, value_target),370) %}
+        {% set value_red = min(max(30, value_target-20),370) %}
+        {% endif %}
+        {% set cmddata = '%02x' % (value_com % 256) + '%02x' % (value_com // 256) + '%02x' % (value_sta % 256) + '%02x' % (value_sta // 256) + '%02x' % (value_red % 256) + '%02x' % (value_red // 256) + '000000' %}
+        {% set cmd = {'mode': 'write-raw', 'data':[[426, cmddata]]} %}
+        {{ cmd | to_json }}
+      
+
+# Device-Identifikation (Priorität: erster gefundener wird verwendet)
+device_identification_dids:
+  377:  # IdentNumber - oft Seriennummer/Modellinfo
+    type: "device_info"
+    name_key: "device_ident"
+    extract_model: true  # Versuche Modell aus String zu extrahieren
+  256:  # DeviceProperty 
+    type: "device_info" 
+    name_key: "device_property"
+  # Weitere DIDs können hier ergänzt werden je nach Gerätetyp
+
+# Geräte-Mapping basierend auf gefundenen Strings
+device_patterns:
+  - pattern: "250"
+    name: "Vitocal 250-A"
+    model: "Vitocal 250-A"
+  - pattern: "252" 
+    name: "Vitocal 252-A"
+    model: "Vitocal 252-A"
+  - pattern: "VX3"
+    name: "Viessmann VX3"
+    model: "VX3"
+  - pattern: "VDENS"
+    name: "Viessmann Vitodens"
+    model: "Vitodens"
+
+# Fallback wenn keine Device-Info gefunden
+default_device:
+  name: "Open3E System"
+  model: "E3 Controller"
+
+# Fehlerhafte DIDs (werden ignoriert)
+ignored_dids:
+  - 540  # Device rejected read access

@@ -1,0 +1,164 @@
+# Typ-Templates für MQTT Discovery
+# Definiert Eigenschaften basierend auf Datenpunkt-Typen
+
+# Basis-Sensor-Typen
+temperature_sensor:
+  entity_type: "sensor"
+  device_class: "temperature"
+  unit_of_measurement: "°C"
+  icon: "mdi:thermometer"
+  state_class: "measurement"
+
+pressure_sensor:
+  entity_type: "sensor"
+  device_class: "pressure"
+  unit_of_measurement: "bar"
+  icon: "mdi:gauge"
+  state_class: "measurement"
+
+pump_sensor:
+  entity_type: "sensor"
+  device_class: "power_factor"
+  unit_of_measurement: "%"
+  icon: "mdi:pump"
+  state_class: "measurement"
+
+power_sensor:
+  entity_type: "sensor"
+  device_class: "power"
+  unit_of_measurement: "W"
+  icon: "mdi:transmission-tower-export"
+  state_class: "measurement"
+
+valve_position:
+  entity_type: "sensor"
+  unit_of_measurement: "%"
+  icon: "mdi:valve"
+  state_class: "measurement"
+
+generic_sensor:
+  entity_type: "sensor"
+  icon: "mdi:information-outline"
+
+energy_sensor:
+  entity_type: "sensor"
+  device_class: "energy"
+  unit_of_measurement: "kWh"
+  icon: "mdi:lightning-bolt"
+  state_class: "total_increasing"
+
+# Komplexe Typen mit mehreren Sensoren
+pump_complex:
+  entity_type: "multi_sensor"
+  icon: "mdi:pump"
+  sub_types:
+    target_power_state:
+      entity_type: "binary_sensor"
+      device_class: "power"
+      icon: "mdi:power"
+    target_value:
+      entity_type: "sensor"
+      unit_of_measurement: "%"
+      icon: "mdi:target"
+      state_class: "measurement"
+    power_state:
+      entity_type: "binary_sensor"
+      device_class: "power"
+      icon: "mdi:power"
+    error_state:
+      entity_type: "sensor"
+      icon: "mdi:alert-circle"
+    actual_value:
+      entity_type: "sensor"
+      unit_of_measurement: "%"
+      icon: "mdi:gauge"
+      state_class: "measurement"
+
+valve_complex:
+  entity_type: "multi_sensor"
+  icon: "mdi:valve"
+  sub_types:
+    position:
+      entity_type: "sensor"
+      unit_of_measurement: "%"
+      icon: "mdi:valve"
+      state_class: "measurement"
+
+# Schreibbare Sollwerte
+temperature_setpoint:
+  entity_type: "number"
+  device_class: "temperature"
+  unit_of_measurement: "°C"
+  icon: "mdi:thermometer"
+  mode: "slider"
+
+select_mode:
+  entity_type: "select"
+  icon: "mdi:home-circle"
+  options: ["off", "auto"]
+
+temperature_setpoint_complex:
+  entity_type: "multi_number"
+  device_class: "temperature"
+  unit_of_measurement: "°C"
+  icon: "mdi:thermometer"
+  mode: "slider"
+  sub_types:
+    comfort:
+      entity_type: "number"
+      device_class: "temperature"
+      unit_of_measurement: "°C"
+      icon: "mdi:thermometer-plus"
+      mode: "slider"
+    standard:
+      entity_type: "number"
+      device_class: "temperature"
+      unit_of_measurement: "°C"
+      icon: "mdi:thermometer"
+      mode: "slider"
+    reduced:
+      entity_type: "number"
+      device_class: "temperature"
+      unit_of_measurement: "°C"
+      icon: "mdi:thermometer-minus"
+      mode: "slider"
+
+# Sonstige Typen
+smart_grid:
+  entity_type: "multi_sensor"
+  icon: "mdi:transmission-tower"
+  sub_types:
+    operating_status:
+      entity_type: "sensor"
+      icon: "mdi:information"
+
+# Binary on/off sensors
+binary_onoff:
+  entity_type: "binary_sensor"
+  device_class: "power"
+  icon: "mdi:power"
+
+# Sub-Typ-Templates für generische Verwendung
+sub_type_templates:
+  current:
+    entity_type: "sensor"
+    state_class: "measurement"
+    suffix: " Aktuell"
+  min:
+    entity_type: "sensor"
+    state_class: "measurement"
+    suffix: " Minimum"
+  max:
+    entity_type: "sensor"
+    state_class: "measurement"
+    suffix: " Maximum"
+  avg:
+    entity_type: "sensor"
+    state_class: "measurement"
+    suffix: " Durchschnitt"
+  unknown:
+    enabled: false
+  error:
+    entity_type: "sensor"
+    icon: "mdi:alert-circle"
+    suffix: " Fehler"

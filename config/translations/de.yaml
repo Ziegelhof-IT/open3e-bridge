@@ -1,0 +1,89 @@
+# Deutsche Übersetzungen für Open3E Datenpunkte
+
+# Datenpunkt-Namen
+flow_temperature: "Vorlauftemperatur"
+return_temperature: "Rücklauftemperatur"
+dhw_temperature: "Warmwassertemperatur"
+outside_temperature: "Außentemperatur"
+mixer1_flow_temperature: "Heizkreis 1 Vorlauftemperatur"
+mixer2_flow_temperature: "Heizkreis 2 Vorlauftemperatur"
+primary_hx_temperature: "Primär-Wärmetauscher Temperatur"
+compressor_inlet_temperature: "Verdichter Einlass Temperatur"
+compressor_outlet_temperature: "Verdichter Auslass Temperatur"
+secondary_hx_temperature: "Sekundär-Wärmetauscher Temperatur"
+
+water_pressure: "Wasserdruck"
+compressor_inlet_pressure: "Verdichter Einlass Druck"
+compressor_outlet_pressure: "Verdichter Auslass Druck"
+
+central_heating_pump: "Zentralheizungspumpe"
+mixer1_pump: "Heizkreis 1 Pumpe"
+mixer2_pump: "Heizkreis 2 Pumpe"
+
+expansion_valve1_position: "Expansionsventil 1 Position"
+expansion_valve2_position: "Expansionsventil 2 Position"
+mixer1_valve_position: "Heizkreis 1 3-Wege-Ventil"
+mixer2_valve_position: "Heizkreis 2 3-Wege-Ventil"
+
+dhw_setpoint: "Warmwasser Solltemperatur"
+mixer1_room_setpoint: "Heizkreis 1 Raumtemperatur"
+mixer2_room_setpoint: "Heizkreis 2 Raumtemperatur"
+
+smart_grid_ready: "Smart Grid Ready"
+
+# Zusätzliche Namen für Vitocal-Beispiele
+heat_pump_frost_protection: "Wärmepumpe Frostschutz"
+mixer1_pump: "Heizkreis 1 Pumpe"
+power_consumption_system: "Leistungsaufnahme System"
+primary_circuit_fan_one: "Primärkreislauf Lüfter 1"
+primary_circuit_fan_two: "Primärkreislauf Lüfter 2"
+max_power_electric_heater: "Max. Leistung E-Heizung"
+mapper_note: ""
+mixer2_pump: "Heizkreis 2 Pumpe"
+mixer1_operation_mode: "Heizkreis 1 Betriebsmodus"
+mixer2_operation_mode: "Heizkreis 2 Betriebsmodus"
+"mixer1_climate": "Heizkreis 1"
+"mixer2_climate": "Heizkreis 2"
+secondary_outlet_temperature: "Sekundärkreislauf Vorlauf Temperatur"
+engine_room_temperature: "Heizungsraum Temperatur"
+economizer_liquid_temperature: "Verflüssiger Temperatur"
+evaporator_vapor_temperature: "Verdampfer Temperatur"
+compressor_status: "Kompressor Status"
+additional_heater_status: "Zusatzheizung Status"
+mixer1_frost_protection: "HK1 Frostschutz"
+mixer2_frost_protection: "HK2 Frostschutz"
+ems_resulting_control_state: "Smart Grid Betriebszustand"
+buffer_bottom_temperature: "Pufferspeicher Temperatur unten"
+buffer_mid_temperature: "Pufferspeicher Temperatur Mitte"
+buffer_top_temperature: "Pufferspeicher Temperatur oben"
+thermal_power_system: "Thermische Leistung (System)"
+grid_active_power: "Netz Wirkleistung"
+electrical_energy_stats: "Elektrische Energie Statistik"
+
+# Sub-Typen
+current: "Aktuell"
+min: "Minimum"
+max: "Maximum"
+avg: "Durchschnitt"
+unknown: "Unbekannt"
+error: "Fehler"
+
+target_power_state: "Soll Ein/Aus"
+target_value: "Sollwert"
+power_state: "Ein/Aus Status"
+error_state: "Fehlerstatus"
+actual_value: "Istwert"
+
+position: "Position"
+
+comfort: "Komfort"
+standard: "Normal"
+reduced: "Reduziert"
+
+operating_status: "Betriebsstatus"
+
+# Einheiten (falls übersetzt werden sollen)
+celsius: "°C"
+bar: "bar"
+percent: "%"
+watt: "W"
