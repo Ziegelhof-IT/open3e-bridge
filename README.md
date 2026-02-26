@@ -1,5 +1,7 @@
 # Open3E Home Assistant Bridge
 
+> **⚠ Not production ready** — work in progress, expect breaking changes.
+
 Generates Home Assistant MQTT Discovery from Open3E MQTT topics. No manual HA YAML needed: entities appear automatically based on datapoint mappings in YAML.
 
 ## Quick Start
