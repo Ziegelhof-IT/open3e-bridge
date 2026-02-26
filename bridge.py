@@ -7,6 +7,7 @@ aus Open3E Datenpunkten.
 """
 import argparse
 import logging
+import signal
 import time
 import json
 from typing import Dict, Set
@@ -41,7 +42,11 @@ class Open3EBridge:
         
         if mqtt_user and mqtt_password:
             self.client.username_pw_set(mqtt_user, mqtt_password)
-        
+
+        # LWT (Last Will and Testament)
+        self.lwt_topic = "open3e/bridge/LWT"
+        self.client.will_set(self.lwt_topic, "offline", qos=1, retain=True)
+
         # Generator
         config_dir = Path(__file__).parent / "config"
         self.generator = HomeAssistantGenerator(str(config_dir), language, discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix)
@@ -52,15 +57,26 @@ class Open3EBridge:
         logger.info("Open3E Bridge initialized: MQTT=%s:%d lang=%s test=%s prefix=%s",
                     mqtt_host, mqtt_port, language, test_mode, self.generator.discovery_prefix)
         
+    def _graceful_shutdown(self, signum=None, frame=None):
+        """Graceful shutdown: publish offline LWT, then disconnect."""
+        sig_name = signal.Signals(signum).name if signum else "unknown"
+        logger.info("Received %s, shutting down gracefully...", sig_name)
+        try:
+            self.client.publish(self.lwt_topic, "offline", qos=1, retain=True)
+            self.client.disconnect()
+        except Exception:
+            pass
+
     def start(self):
         """Startet die Bridge"""
+        signal.signal(signal.SIGTERM, self._graceful_shutdown)
+        signal.signal(signal.SIGINT, self._graceful_shutdown)
         try:
             logger.info("Connecting to MQTT broker %s:%d ...", self.mqtt_host, self.mqtt_port)
             self.client.connect(self.mqtt_host, self.mqtt_port, 60)
             self.client.loop_forever()
         except KeyboardInterrupt:
-            logger.info("Shutting down...")
-            self.client.disconnect()
+            self._graceful_shutdown(signum=signal.SIGINT)
         except Exception as e:
             logger.error("Error: %s", e)
 
@@ -99,6 +115,7 @@ class Open3EBridge:
         """MQTT Connect Callback (paho v2)"""
         if reason_code == 0:
             logger.info("Connected to MQTT broker")
+            client.publish(self.lwt_topic, "online", qos=1, retain=True)
             client.subscribe("open3e/+/+")
             client.subscribe("open3e/+")
             client.subscribe("open3e/LWT")
