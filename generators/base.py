@@ -74,7 +74,45 @@ class BaseGenerator:
                 if 'options' in scfg and not isinstance(scfg['options'], list):
                     errors.append(f"DID {key} sub '{subname}': 'options' must be a list")
 
+        # ROB-04: Jinja2 template syntax validation
+        self._validate_jinja_templates(dps, errors)
+
         return {"errors": errors, "warnings": warnings}
+
+    @staticmethod
+    def _validate_jinja_templates(dps: Dict, errors: List[str]):
+        """Validate Jinja2 syntax in all templates found in datapoints config."""
+        try:
+            from jinja2 import Environment, TemplateSyntaxError
+        except ImportError:
+            return  # jinja2 is a dev dependency, skip if not installed
+
+        env = Environment()
+        template_keys = ('value_template', 'command_template',
+                         'mode_state_template', 'mode_command_template',
+                         'temperature_command_template')
+
+        def _check(did_key: str, context: str, value: str):
+            try:
+                env.parse(value)
+            except TemplateSyntaxError as e:
+                errors.append(f"DID {did_key} {context}: Jinja2 syntax error: {e}")
+
+        for key, cfg in dps.items():
+            for tk in template_keys:
+                if tk in cfg and isinstance(cfg[tk], str):
+                    _check(key, tk, cfg[tk])
+            for subname, scfg in (cfg.get('subs') or {}).items():
+                if not isinstance(scfg, dict):
+                    continue
+                for tk in template_keys:
+                    if tk in scfg and isinstance(scfg[tk], str):
+                        _check(key, f"sub '{subname}' {tk}", scfg[tk])
+            climate = cfg.get('climate')
+            if isinstance(climate, dict):
+                for tk in template_keys:
+                    if tk in climate and isinstance(climate[tk], str):
+                        _check(key, f"climate {tk}", climate[tk])
 
     def _load_yaml(self, filepath: Path) -> Dict[str, Any]:
         """Lädt YAML-Datei"""

@@ -47,6 +47,9 @@ class Open3EBridge:
         self.lwt_topic = "open3e/bridge/LWT"
         self.client.will_set(self.lwt_topic, "offline", qos=1, retain=True)
 
+        # ROB-02: Reconnect with exponential backoff
+        self.client.reconnect_delay_set(min_delay=1, max_delay=120)
+
         # Generator
         config_dir = Path(__file__).parent / "config"
         self.generator = HomeAssistantGenerator(str(config_dir), language, discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix)
@@ -119,42 +122,62 @@ class Open3EBridge:
             client.subscribe("open3e/+/+")
             client.subscribe("open3e/+")
             client.subscribe("open3e/LWT")
-            logger.debug("Subscribed to open3e topics")
+            # ROB-01: Re-publish discovery when HA restarts
+            client.subscribe("homeassistant/status")
+            logger.debug("Subscribed to open3e topics and homeassistant/status")
         else:
             logger.error("Failed to connect to MQTT broker: %s", reason_code)
     
+    def _republish_all_discovery(self):
+        """ROB-01: Re-publish all cached discovery configs (e.g. after HA restart)."""
+        count = len(self.published_configs)
+        if count == 0:
+            return
+        logger.info("Re-publishing %d cached discovery configs", count)
+        for topic, payload in self.published_configs.items():
+            self.client.publish(topic, payload, retain=True)
+
     def _on_message(self, client, userdata, msg):
         """MQTT Message Callback"""
         try:
             topic = msg.topic
             payload = msg.payload.decode('utf-8')
-            
+
+            # ROB-01: HA birth message → republish all discovery
+            if topic == "homeassistant/status" and payload == "online":
+                self._republish_all_discovery()
+                return
+
             # Skip LWT und andere Systemnachrichten
             if '/LWT' in topic or topic.endswith('/LWT'):
                 return
-                
+
             logger.debug("Processing: %s = %s", topic, payload)
-            
+
             # Generiere Discovery Messages
             discovery_messages = self.generator.generate_discovery_message(
                 topic, payload, self.test_mode
             )
-            
+
             # Publiziere Discovery Messages
             for discovery_topic, discovery_payload in discovery_messages:
                 previous = self.published_configs.get(discovery_topic)
                 if previous == discovery_payload:
-                    # No change, skip re-publish
                     continue
                 logger.info("Publishing discovery: %s", discovery_topic)
                 if self.test_mode:
                     logger.debug("Payload: %s", discovery_payload)
-                # Always use instance client to support simulation calls
                 self.client.publish(discovery_topic, discovery_payload, retain=True)
                 self.published_configs[discovery_topic] = discovery_payload
-            
+
+        except UnicodeDecodeError:
+            logger.warning("Non-UTF-8 payload on topic %s, skipping", msg.topic)
+        except json.JSONDecodeError as e:
+            logger.warning("Invalid JSON on topic %s: %s", msg.topic, e)
+        except (ValueError, KeyError) as e:
+            logger.warning("Bad data on topic %s: %s", msg.topic, e)
         except Exception as e:
-            logger.error("Error processing message %s: %s", topic, e)
+            logger.error("Unexpected error processing %s: %s", msg.topic, e, exc_info=True)
 
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
         """MQTT Disconnect Callback (paho v2)"""
