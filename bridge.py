@@ -6,6 +6,7 @@ Automatische Erstellung von Home Assistant MQTT Discovery Messages
 aus Open3E Datenpunkten.
 """
 import argparse
+import logging
 import time
 import json
 from typing import Dict, Set
@@ -14,6 +15,8 @@ from pathlib import Path
 import re
 
 from generators.homeassistant import HomeAssistantGenerator
+
+logger = logging.getLogger("open3e_bridge")
 
 class Open3EBridge:
     def __init__(self, mqtt_host: str = "localhost", mqtt_port: int = 1883, 
@@ -45,23 +48,20 @@ class Open3EBridge:
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
         self.published_configs: Dict[str, str] = {}
         
-        print(f"Open3E Bridge initialized:")
-        print(f"  MQTT: {mqtt_host}:{mqtt_port}")
-        print(f"  Language: {language}")
-        print(f"  Test Mode: {test_mode}")
-        print(f"  Discovery Prefix: {self.generator.discovery_prefix}")
+        logger.info("Open3E Bridge initialized: MQTT=%s:%d lang=%s test=%s prefix=%s",
+                    mqtt_host, mqtt_port, language, test_mode, self.generator.discovery_prefix)
         
     def start(self):
         """Startet die Bridge"""
         try:
-            print(f"Connecting to MQTT broker {self.mqtt_host}:{self.mqtt_port}...")
+            logger.info("Connecting to MQTT broker %s:%d ...", self.mqtt_host, self.mqtt_port)
             self.client.connect(self.mqtt_host, self.mqtt_port, 60)
             self.client.loop_forever()
         except KeyboardInterrupt:
-            print("\\nShutting down...")
+            logger.info("Shutting down...")
             self.client.disconnect()
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error("Error: %s", e)
 
     def cleanup(self, timeout_s: float = 2.0):
         """Löscht alte Discovery-Konfigurationen (Retain leeren) für open3e-Entities."""
@@ -71,7 +71,7 @@ class Open3EBridge:
             if rc == 0:
                 client.subscribe(f"{self.generator.discovery_prefix}/#")
             else:
-                print(f"Failed to connect for cleanup: rc={rc}")
+                logger.error("Failed to connect for cleanup: rc=%s", rc)
 
         def _on_message(client, userdata, msg):
             if getattr(msg, 'retain', False):
@@ -80,7 +80,7 @@ class Open3EBridge:
         self.client.on_connect = _on_connect
         self.client.on_message = _on_message
 
-        print(f"Connecting for cleanup to {self.mqtt_host}:{self.mqtt_port}...")
+        logger.info("Connecting for cleanup to %s:%d ...", self.mqtt_host, self.mqtt_port)
         self.client.connect(self.mqtt_host, self.mqtt_port, 60)
         self.client.loop_start()
         time.sleep(timeout_s)
@@ -88,23 +88,22 @@ class Open3EBridge:
 
         pattern = re.compile(rf"^{re.escape(self.generator.discovery_prefix)}/(sensor|number|select|binary_sensor|climate)/open3e_[^/]+/config$")
         targets = [t for t in retained if pattern.match(t)]
-        print(f"Found {len(retained)} retained under prefix, {len(targets)} matching open3e entities.")
+        logger.info("Found %d retained under prefix, %d matching open3e entities.", len(retained), len(targets))
         for t in targets:
-            print(f"  clearing retain: {t}")
+            logger.debug("Clearing retain: %s", t)
             self.client.publish(t, payload="", retain=True)
         self.client.disconnect()
     
     def _on_connect(self, client, userdata, flags, rc):
         """MQTT Connect Callback"""
         if rc == 0:
-            print("Connected to MQTT broker")
-            # Subscribe zu Open3E Topics
+            logger.info("Connected to MQTT broker")
             client.subscribe("open3e/+/+")
             client.subscribe("open3e/+")
             client.subscribe("open3e/LWT")
-            print("Subscribed to open3e/+/+ topics")
+            logger.debug("Subscribed to open3e topics")
         else:
-            print(f"Failed to connect to MQTT broker: {rc}")
+            logger.error("Failed to connect to MQTT broker: %s", rc)
     
     def _on_message(self, client, userdata, msg):
         """MQTT Message Callback"""
@@ -116,7 +115,7 @@ class Open3EBridge:
             if '/LWT' in topic or topic.endswith('/LWT'):
                 return
                 
-            print(f"Processing: {topic} = {payload}")
+            logger.debug("Processing: %s = %s", topic, payload)
             
             # Generiere Discovery Messages
             discovery_messages = self.generator.generate_discovery_message(
@@ -129,15 +128,15 @@ class Open3EBridge:
                 if previous == discovery_payload:
                     # No change, skip re-publish
                     continue
-                print(f"  -> Publishing to: {discovery_topic}")
+                logger.info("Publishing discovery: %s", discovery_topic)
                 if self.test_mode:
-                    print(f"     Payload: {discovery_payload}")
+                    logger.debug("Payload: %s", discovery_payload)
                 # Always use instance client to support simulation calls
                 self.client.publish(discovery_topic, discovery_payload, retain=True)
                 self.published_configs[discovery_topic] = discovery_payload
             
         except Exception as e:
-            print(f"Error processing message {topic}: {e}")
+            logger.error("Error processing message %s: %s", topic, e)
 
 def main():
     parser = argparse.ArgumentParser(description="Open3E Home Assistant Bridge")
@@ -152,8 +151,15 @@ def main():
     parser.add_argument("--simulate", help="Simulate with MQTT messages from file")
     parser.add_argument("--cleanup", action="store_true", help="Cleanup retained discovery for open3e entities")
     parser.add_argument("--validate-config", action="store_true", help="Validate datapoints/templates and exit")
-    
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                        help="Logging level (default: INFO)")
+
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     
     # Test Mode nur wenn explizit gewünscht
     test_mode = args.test or bool(args.simulate)
@@ -183,12 +189,12 @@ def main():
         validator = HomeAssistantGenerator(str(Path(__file__).parent / "config"), args.language, discovery_prefix=discovery_prefix)
         result = validator.validate()
         if result["errors"]:
-            print("Config validation FAILED:")
+            logger.error("Config validation FAILED:")
             for e in result["errors"]:
-                print(f" - {e}")
+                logger.error("  %s", e)
             raise SystemExit(1)
         else:
-            print("Config validation OK.")
+            logger.info("Config validation OK.")
             raise SystemExit(0)
 
     # Cleanup-only mode
@@ -204,11 +210,11 @@ def main():
 
 def simulate_from_file(bridge: Open3EBridge, filepath: str):
     """Simuliert MQTT Messages aus Datei"""
-    print(f"Simulating MQTT messages from {filepath}")
+    logger.info("Simulating MQTT messages from %s", filepath)
     
     try:
         # Ensure MQTT connection for publishing discovery during simulation
-        print(f"Connecting to MQTT broker {bridge.mqtt_host}:{bridge.mqtt_port} for simulation...")
+        logger.info("Connecting to MQTT broker %s:%d for simulation...", bridge.mqtt_host, bridge.mqtt_port)
         bridge.client.connect(bridge.mqtt_host, bridge.mqtt_port, 60)
         bridge.client.loop_start()
         # Fake MQTT Client für Simulation
@@ -235,9 +241,9 @@ def simulate_from_file(bridge: Open3EBridge, filepath: str):
         bridge.client.loop_stop()
         bridge.client.disconnect()
     except FileNotFoundError:
-        print(f"File not found: {filepath}")
+        logger.error("File not found: %s", filepath)
     except Exception as e:
-        print(f"Error in simulation: {e}")
+        logger.error("Error in simulation: %s", e)
 
 if __name__ == "__main__":
     main()

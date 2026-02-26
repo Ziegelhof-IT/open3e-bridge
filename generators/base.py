@@ -1,11 +1,14 @@
 """
 Basis-Generator für MQTT Discovery Messages
 """
+import logging
 import yaml
 import json
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import re
+
+logger = logging.getLogger("open3e_bridge.generators")
 
 class BaseGenerator:
     def __init__(self, config_dir: str = "config", language: str = "de"):
@@ -74,7 +77,7 @@ class BaseGenerator:
             with open(filepath, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f) or {}
         except FileNotFoundError:
-            print(f"Warning: {filepath} not found")
+            logger.warning("Config file not found: %s", filepath)
             return {}
     
     def translate(self, key: str) -> str:
@@ -150,7 +153,7 @@ class BaseGenerator:
         
         # Prüfe ob dieser DID Device-Info enthält
         if did in device_id_dids:
-            print(f"  -> Found device info in DID {did}: {value}")
+            logger.debug("Found device info in DID %d: %s", did, value)
             
             # Extrahiere Geräte-Info aus dem Wert
             device_info = self._extract_device_info(value)

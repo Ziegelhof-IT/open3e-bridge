@@ -1,9 +1,12 @@
 """
 Home Assistant MQTT Discovery Generator
 """
+import logging
 import json
 from typing import Dict, Any, List, Optional, Tuple
 from .base import BaseGenerator
+
+logger = logging.getLogger("open3e_bridge.generators.ha")
 
 class HomeAssistantGenerator(BaseGenerator):
     def __init__(self, config_dir: str = "config", language: str = "de", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True):
@@ -37,7 +40,7 @@ class HomeAssistantGenerator(BaseGenerator):
         dp_config = self.get_datapoint_config(did)
         if not dp_config:
             # KEINE Fallback Discovery für unbekannte DIDs
-            print(f"  -> Skipping unknown DID {did} (not configured)")
+            logger.debug("Skipping unknown DID %d (not configured)", did)
             return []
             
         # Generiere Discovery Messages basierend auf Typ
