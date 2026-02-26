@@ -257,3 +257,211 @@ class TestGenerateEntityId:
         result = generator_de.generate_entity_id("680", 268, "A-B.C")
         # Non-alphanumeric (except underscore) replaced by underscore
         assert result == "open3e_680_268_a_b_c"
+
+
+# ---------------------------------------------------------------------------
+# 6. validate edge cases (subs validation)
+# ---------------------------------------------------------------------------
+
+class TestValidateEdgeCases:
+    """Edge cases in BaseGenerator.validate for subs validation."""
+
+    def test_subs_not_a_dict(self, config_dir):
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.datapoints.setdefault("datapoints", {})[88881] = {
+            "type": "temperature_sensor",
+            "subs": "not-a-dict",
+        }
+        result = gen.validate()
+        error_msgs = " ".join(result["errors"])
+        assert "subs" in error_msgs and "mapping" in error_msgs
+
+    def test_sub_config_not_a_dict(self, config_dir):
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.datapoints.setdefault("datapoints", {})[88882] = {
+            "type": "temperature_sensor",
+            "subs": {"Actual": "not-a-dict"},
+        }
+        result = gen.validate()
+        error_msgs = " ".join(result["errors"])
+        assert "must be a mapping" in error_msgs
+
+    def test_sub_options_not_a_list(self, config_dir):
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.datapoints.setdefault("datapoints", {})[88883] = {
+            "type": "temperature_sensor",
+            "subs": {"Actual": {"options": "not-a-list"}},
+        }
+        result = gen.validate()
+        error_msgs = " ".join(result["errors"])
+        assert "'options' must be a list" in error_msgs
+
+
+# ---------------------------------------------------------------------------
+# 7. Jinja2 validation edge cases
+# ---------------------------------------------------------------------------
+
+class TestJinjaValidation:
+    """Tests for Jinja2 template validation paths."""
+
+    def test_jinja_import_error_skips_validation(self, config_dir):
+        """When jinja2 is not importable, validation is skipped."""
+        import sys
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        # Inject a bad template that would fail if jinja2 were available
+        gen.datapoints.setdefault("datapoints", {})[88884] = {
+            "type": "temperature_sensor",
+            "command_template": "{{ invalid",
+        }
+        # Temporarily hide jinja2
+        real_jinja2 = sys.modules.get("jinja2")
+        sys.modules["jinja2"] = None
+        try:
+            # Should not raise even with broken template
+            errors = []
+            BaseGenerator._validate_jinja_templates(
+                gen.datapoints.get("datapoints", {}), errors,
+            )
+            # No errors because jinja2 "import" raises ImportError
+            jinja_errors = [e for e in errors if "88884" in e]
+            assert jinja_errors == []
+        finally:
+            if real_jinja2 is not None:
+                sys.modules["jinja2"] = real_jinja2
+            else:
+                del sys.modules["jinja2"]
+
+    def test_jinja_syntax_error_reported(self, config_dir):
+        """Broken Jinja2 template syntax is reported as error."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.datapoints.setdefault("datapoints", {})[88885] = {
+            "type": "temperature_sensor",
+            "command_template": "{{ invalid",
+        }
+        result = gen.validate()
+        error_msgs = " ".join(result["errors"])
+        assert "88885" in error_msgs and "Jinja2 syntax error" in error_msgs
+
+    def test_jinja_skips_non_dict_subs(self, config_dir):
+        """Non-dict sub entries are skipped during jinja validation (line 107)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.datapoints.setdefault("datapoints", {})[88886] = {
+            "type": "temperature_sensor",
+            "subs": {"Actual": "not-a-dict"},
+        }
+        # Should not crash during jinja validation
+        errors = []
+        BaseGenerator._validate_jinja_templates(
+            gen.datapoints.get("datapoints", {}), errors,
+        )
+        # No jinja errors for this entry (non-dict sub is just skipped)
+        jinja_errors = [e for e in errors if "88886" in e and "Jinja2" in e]
+        assert jinja_errors == []
+
+    def test_jinja_climate_template_error(self, config_dir):
+        """Broken Jinja2 in climate config is reported."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.datapoints.setdefault("datapoints", {})[88887] = {
+            "type": "temperature_sensor",
+            "climate": {"command_template": "{{ broken"},
+        }
+        result = gen.validate()
+        error_msgs = " ".join(result["errors"])
+        assert "88887" in error_msgs and "climate" in error_msgs
+
+
+# ---------------------------------------------------------------------------
+# 8. Device info cache edge cases
+# ---------------------------------------------------------------------------
+
+class TestDeviceInfoCache:
+    """Tests for device cache paths in create_device_info and update_device_info."""
+
+    def test_update_device_info_exception_in_serial(self, config_dir):
+        """Exception during serial extraction is silently caught (L212-213)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        # Use a DID != 377 so int(did)==377 is False, then .get('extract_serial')
+        # on a non-dict raises AttributeError → caught by except block
+        gen.datapoints.setdefault("device_identification_dids", {})[999] = "not-a-dict"
+        gen.update_device_info("680", 999, "some-value")
+        # Should still populate cache (serial extraction fails but rest works)
+        assert "680" in gen.device_cache
+
+    def test_create_device_info_custom_name_no_cache(self, config_dir):
+        """create_device_info with device_name but no cache uses name as model (L251)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        info = gen.create_device_info("680", device_name="CustomDevice")
+        assert info["model"] == "CustomDevice"
+        assert info["name"] == "CustomDevice"
+
+    def test_create_device_info_with_serial_in_cache(self, config_dir):
+        """Cached serial appears in identifiers (L256)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.device_cache["680"] = {"serial": "ABC123", "name": "Test", "model": "Test"}
+        info = gen.create_device_info("680")
+        assert "open3e_ABC123" in info["identifiers"]
+        assert info["identifiers"][0] == "open3e_ABC123"
+
+    def test_create_device_info_with_sw_version(self, config_dir):
+        """Cached sw_version appears in device info (L268)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.device_cache["680"] = {"sw_version": "1.2.3", "name": "Test", "model": "Test"}
+        info = gen.create_device_info("680")
+        assert info["sw_version"] == "1.2.3"
+
+
+# ---------------------------------------------------------------------------
+# 9. merge_config recursive
+# ---------------------------------------------------------------------------
+
+class TestMergeConfig:
+    """Tests for recursive dict merging in merge_config."""
+
+    def test_recursive_merge(self, generator_de):
+        base = {"a": {"x": 1, "y": 2}, "b": 3}
+        override = {"a": {"y": 99, "z": 4}}
+        result = generator_de.merge_config(base, override)
+        assert result == {"a": {"x": 1, "y": 99, "z": 4}, "b": 3}
+
+
+# ---------------------------------------------------------------------------
+# 10. _load_yaml FileNotFoundError
+# ---------------------------------------------------------------------------
+
+class TestLoadYaml:
+    """Test _load_yaml with missing files."""
+
+    def test_missing_config_file_returns_empty(self, tmp_path):
+        """_load_yaml returns {} for non-existent file (L122-124)."""
+        gen = BaseGenerator(config_dir=str(tmp_path / "nonexistent"), language="de")
+        # Constructor calls _load_yaml 3 times, all return {} due to missing files
+        assert gen.datapoints == {}
+        assert gen.translations == {}
+        assert gen.type_templates == {}
+
+
+# ---------------------------------------------------------------------------
+# 11. update_device_info branch coverage
+# ---------------------------------------------------------------------------
+
+class TestUpdateDeviceInfoBranches:
+    """Branch coverage for update_device_info."""
+
+    def test_device_id_did_without_serial_extraction(self, config_dir):
+        """DID in device_identification_dids but not 377 and no extract_serial (210->216)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        # Add a device_identification_did that's not 377 and has no extract_serial
+        gen.datapoints.setdefault("device_identification_dids", {})[999] = {}
+        gen.update_device_info("680", 999, "SomeDevice")
+        assert "680" in gen.device_cache
+        # No serial should be set
+        assert "serial" not in gen.device_cache["680"]
+
+    def test_update_device_info_same_ecu_twice(self, config_dir):
+        """Second call reuses existing cache entry (216->219)."""
+        gen = BaseGenerator(config_dir=config_dir, language="de")
+        gen.update_device_info("680", 377, "Vitocal 250-A HO2C")
+        gen.update_device_info("680", 377, "Vitocal 250-A NEWER")
+        assert "680" in gen.device_cache
+        # Second call updates the existing cache
+        assert gen.device_cache["680"]["serial"] == "Vitocal 250-A NEWER"

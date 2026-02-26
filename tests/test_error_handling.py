@@ -93,3 +93,122 @@ class TestMissingSubItem:
         )
         # Should not crash; generator decides whether to produce output
         assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# 7. _generate_typed_discovery edge cases
+# ---------------------------------------------------------------------------
+
+class TestTypedDiscoveryEdgeCases:
+
+    def test_type_name_missing_returns_empty(self, generator_en):
+        """Datapoint with type=None returns empty list (L88)."""
+        # Inject a DID with no type
+        generator_en.datapoints.setdefault("datapoints", {})[77771] = {
+            "name_key": "test_sensor",
+        }
+        result = generator_en.generate_discovery_message(
+            "open3e/680_77771_TestSensor/Actual", "42",
+        )
+        assert result == []
+
+    def test_type_template_not_found_returns_empty(self, generator_en):
+        """Datapoint with unknown type template returns empty list (L92)."""
+        generator_en.datapoints.setdefault("datapoints", {})[77772] = {
+            "type": "nonexistent_type_xyz",
+            "name_key": "test_sensor",
+        }
+        result = generator_en.generate_discovery_message(
+            "open3e/680_77772_TestSensor/Actual", "42",
+        )
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# 8. Disabled sub-item branch (93->114)
+# ---------------------------------------------------------------------------
+
+class TestDisabledSubItem:
+
+    def test_disabled_sub_returns_no_entity(self, generator_en):
+        """Sub with enabled=False produces no discovery (93->114)."""
+        generator_en.datapoints.setdefault("datapoints", {})[77773] = {
+            "type": "temperature_sensor",
+            "name_key": "test_sensor",
+            "subs": {
+                "Actual": {"type": "current", "enabled": False},
+            },
+        }
+        result = generator_en.generate_discovery_message(
+            "open3e/680_77773_TestSensor/Actual", "42",
+        )
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# 9. Climate config branch coverage (152-166)
+# ---------------------------------------------------------------------------
+
+class TestClimateConfigBranches:
+
+    def test_climate_minimal_config(self, generator_en):
+        """Climate with no optional templates or ranges (all False branches)."""
+        generator_en.datapoints.setdefault("datapoints", {})[77774] = {
+            "type": "select_mode",
+            "name_key": "test_climate",
+            "subs": {
+                "Mode/ID": {
+                    "entity_type": "select",
+                    "options": ["off", "auto"],
+                },
+            },
+            "climate": {
+                "name_key": "test_climate",
+                "trigger_sub": "Mode/ID",
+                # No mode_state_template (152->154)
+                # No mode_command_template (154->158)
+                # No temperature_did / temperature_did_name (158->160)
+                # No temperature_command_template (161->165)
+                # No min_temp/max_temp/precision/temperature_unit (166->165)
+            },
+        }
+        results = generator_en.generate_discovery_message(
+            "open3e/680_77774_TestClimate/Mode/ID", "1",
+        )
+        # Should produce select + climate entities
+        climate_results = [(t, p) for t, p in results if "/climate/" in t]
+        assert len(climate_results) == 1
+        import json
+        config = json.loads(climate_results[0][1])
+        assert "mode_state_template" not in config
+        assert "mode_command_template" not in config
+        assert "temperature_state_topic" not in config
+        assert "temperature_command_template" not in config
+        assert "min_temp" not in config
+
+
+# ---------------------------------------------------------------------------
+# 10. Writable entity with no min/max/step in dp_config or template (219->216)
+# ---------------------------------------------------------------------------
+
+class TestWritableNoMinMaxStep:
+
+    def test_writable_without_min_max_step(self, generator_en):
+        """Writable entity where min/max/step not in dp_config or template (219->216)."""
+        generator_en.datapoints.setdefault("datapoints", {})[77775] = {
+            "type": "generic_sensor",
+            "name_key": "test_writable",
+            "writable": True,
+            # No min, max, step here
+        }
+        # generic_sensor template also has no min/max/step
+        results = generator_en.generate_discovery_message(
+            "open3e/680_77775_TestWritable", "42",
+        )
+        assert len(results) == 1
+        import json
+        config = json.loads(results[0][1])
+        assert "command_topic" in config
+        assert "min" not in config
+        assert "max" not in config
+        assert "step" not in config

@@ -54,33 +54,6 @@ class HomeAssistantGenerator(BaseGenerator):
 
         return results
 
-    def _generate_fallback_discovery(self, parsed: Dict[str, Any], value: str, test_mode: bool) -> List[Tuple[str, str]]:
-        """Generiert Fallback Discovery für unbekannte DIDs"""
-        ecu_addr = parsed['ecu_addr']
-        did = parsed['did']
-        sub_item = parsed['sub_item'] or 'value'
-        sensor_name = parsed['sensor_name']
-
-        entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
-        unique_id = self.generate_unique_id(ecu_addr, did, sub_item)
-
-        discovery_topic = self._build_discovery_topic("sensor", entity_id, test_mode)
-
-        config = {
-            "name": f"{sensor_name} {sub_item}",
-            "unique_id": unique_id,
-            "default_entity_id": entity_id,
-            "state_topic": parsed['full_topic'],
-            "device": self.create_device_info(ecu_addr),
-            "icon": "mdi:help-circle"
-        }
-
-        # Füge Unit hinzu falls numerisch
-        if self._is_numeric(value):
-            config["state_class"] = "measurement"
-
-        return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
-
     def _generate_typed_discovery(self, parsed: Dict[str, Any], dp_config: Dict[str, Any], value: str, test_mode: bool) -> List[Tuple[str, str]]:
         """Generiert Discovery Messages basierend auf Datenpunkt-Typ"""
         type_name = dp_config.get('type')
@@ -253,19 +226,3 @@ class HomeAssistantGenerator(BaseGenerator):
 
         return config
 
-    def _guess_entity_type(self, value: str) -> str:
-        """Rät Entity-Typ basierend auf Wert"""
-        if self._is_numeric(value):
-            return "sensor"
-        elif value.lower() in ['on', 'off', '1', '0', 'true', 'false']:
-            return "binary_sensor"
-        else:
-            return "sensor"
-
-    def _is_numeric(self, value: str) -> bool:
-        """Prüft ob Wert numerisch ist"""
-        try:
-            float(value)
-            return True
-        except ValueError:
-            return False

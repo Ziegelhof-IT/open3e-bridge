@@ -294,5 +294,5 @@ def simulate_from_file(bridge: Open3EBridge, filepath: str):
     except Exception as e:
         logger.error("Error in simulation: %s", e)
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

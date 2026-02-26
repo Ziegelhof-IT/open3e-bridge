@@ -65,6 +65,7 @@ class BaseGenerator:
             subs = cfg.get('subs', {}) or {}
             if subs and not isinstance(subs, dict):
                 errors.append(f"DID {key}: 'subs' must be a mapping")
+                subs = {}
             for subname, scfg in subs.items():
                 if not isinstance(scfg, dict):
                     errors.append(f"DID {key} sub '{subname}': must be a mapping")
@@ -102,7 +103,10 @@ class BaseGenerator:
             for tk in template_keys:
                 if tk in cfg and isinstance(cfg[tk], str):
                     _check(key, tk, cfg[tk])
-            for subname, scfg in (cfg.get('subs') or {}).items():
+            subs_raw = cfg.get('subs') or {}
+            if not isinstance(subs_raw, dict):
+                continue
+            for subname, scfg in subs_raw.items():
                 if not isinstance(scfg, dict):
                     continue
                 for tk in template_keys:
