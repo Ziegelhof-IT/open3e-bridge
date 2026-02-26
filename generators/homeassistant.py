@@ -72,7 +72,7 @@ class HomeAssistantGenerator(BaseGenerator):
         config = {
             "name": f"{sensor_name} {sub_item}",
             "unique_id": unique_id,
-            "object_id": entity_id,
+            "default_entity_id": entity_id,
             "state_topic": parsed['full_topic'],
             "device": self.create_device_info(ecu_addr),
             "icon": "mdi:help-circle"
@@ -161,11 +161,18 @@ class HomeAssistantGenerator(BaseGenerator):
         config: Dict[str, Any] = {
             'name': name,
             'unique_id': unique_id,
-            'object_id': entity_id,
+            'default_entity_id': entity_id,
             'device': self.create_device_info(ecu_addr),
             'availability_topic': 'open3e/LWT',
             'payload_available': 'online',
             'payload_not_available': 'offline',
+        }
+
+        # Origin information
+        config['origin'] = {
+            'name': 'Open3E Bridge',
+            'sw_version': '0.1.0',
+            'support_url': 'https://github.com/open3e/open3e-bridge',
         }
 
         # Mode topics/templates
@@ -205,7 +212,7 @@ class HomeAssistantGenerator(BaseGenerator):
         config = {
             "name": name,
             "unique_id": unique_id,
-            "object_id": entity_id,
+            "default_entity_id": entity_id,
             "state_topic": state_topic,
             "device": self.create_device_info(ecu_addr),
             # Basic availability (expects open3e to publish LWT)
@@ -224,6 +231,13 @@ class HomeAssistantGenerator(BaseGenerator):
             if key in dp_config:
                 config[key] = dp_config[key]
         
+        # Origin information
+        config["origin"] = {
+            "name": "Open3E Bridge",
+            "sw_version": "0.1.0",
+            "support_url": "https://github.com/open3e/open3e-bridge",
+        }
+
         # Schreibbare Entities
         if dp_config.get('writable') or template.get('writable'):
             config["command_topic"] = "open3e/cmnd"

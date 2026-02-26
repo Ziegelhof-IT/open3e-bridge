@@ -33,12 +33,10 @@ smart_grid_ready: "Smart Grid Ready"
 
 # Extra names for Vitocal examples
 heat_pump_frost_protection: "Heat Pump Frost Protection"
-mixer1_pump: "Circuit 1 Pump"
 power_consumption_system: "Power Consumption (System)"
 primary_circuit_fan_one: "Primary Circuit Fan 1"
 primary_circuit_fan_two: "Primary Circuit Fan 2"
 max_power_electric_heater: "Max Power Electric Heater"
-mixer2_pump: "Circuit 2 Pump"
 mixer1_operation_mode: "Circuit 1 Operation Mode"
 mixer2_operation_mode: "Circuit 2 Operation Mode"
 "mixer1_climate": "Heating Circuit 1"
@@ -80,6 +78,9 @@ standard: "Standard"
 reduced: "Reduced"
 
 operating_status: "Operating Status"
+
+# HA Device
+suggested_area: "Heating"
 
 # Units (if translation needed)
 celsius: "°C"

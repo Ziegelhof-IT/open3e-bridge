@@ -235,7 +235,7 @@ datapoints:
         icon: "mdi:pump"
         command_template: >
           {% set intvalue = value | int %}
-          {% set cmddata = '14' + '%0x' % intvalue + '%0x' % intvalue %}
+          {% set cmddata = '14' + '%02x' % intvalue + '%02x' % intvalue %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1102, cmddata]]} %}
           {{ cmd | to_json }}
 
@@ -289,7 +289,7 @@ datapoints:
         icon: "mdi:pump"
         command_template: >
           {% set intvalue = value | int %}
-          {% set cmddata = '1464' + '%0x' % intvalue %}
+          {% set cmddata = '1464' + '%02x' % intvalue %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
           {{ cmd | to_json }}
 

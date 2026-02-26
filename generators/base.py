@@ -52,6 +52,11 @@ class BaseGenerator:
                 if num_key in cfg and not isinstance(cfg[num_key], (int, float)):
                     errors.append(f"DID {key}: '{num_key}' must be number")
 
+            # name_key against translations
+            name_key = cfg.get('name_key')
+            if name_key and name_key not in self.translations:
+                warnings.append(f"DID {key}: name_key '{name_key}' missing in {self.language} translations")
+
             # Options type
             if 'options' in cfg and not isinstance(cfg['options'], list):
                 errors.append(f"DID {key}: 'options' must be a list")
@@ -217,7 +222,7 @@ class BaseGenerator:
             "name": device_name,
             "manufacturer": "Viessmann",
             "model": model,
-            "suggested_area": "Heizung"
+            "suggested_area": self.translate("suggested_area")
         }
 
         # Optional: SW-Version falls vorhanden
