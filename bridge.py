@@ -33,10 +33,11 @@ class Open3EBridge:
         self.discovery_prefix = discovery_prefix
         self.add_test_prefix = add_test_prefix
         
-        # MQTT Client
-        self.client = mqtt.Client()
+        # MQTT Client (paho-mqtt v2 API)
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
+        self.client.on_disconnect = self._on_disconnect
         
         if mqtt_user and mqtt_password:
             self.client.username_pw_set(mqtt_user, mqtt_password)
@@ -67,11 +68,11 @@ class Open3EBridge:
         """Löscht alte Discovery-Konfigurationen (Retain leeren) für open3e-Entities."""
         retained: Set[str] = set()
 
-        def _on_connect(client, userdata, flags, rc):
-            if rc == 0:
+        def _on_connect(client, userdata, connect_flags, reason_code, properties):
+            if reason_code == 0:
                 client.subscribe(f"{self.generator.discovery_prefix}/#")
             else:
-                logger.error("Failed to connect for cleanup: rc=%s", rc)
+                logger.error("Failed to connect for cleanup: rc=%s", reason_code)
 
         def _on_message(client, userdata, msg):
             if getattr(msg, 'retain', False):
@@ -94,16 +95,16 @@ class Open3EBridge:
             self.client.publish(t, payload="", retain=True)
         self.client.disconnect()
     
-    def _on_connect(self, client, userdata, flags, rc):
-        """MQTT Connect Callback"""
-        if rc == 0:
+    def _on_connect(self, client, userdata, connect_flags, reason_code, properties):
+        """MQTT Connect Callback (paho v2)"""
+        if reason_code == 0:
             logger.info("Connected to MQTT broker")
             client.subscribe("open3e/+/+")
             client.subscribe("open3e/+")
             client.subscribe("open3e/LWT")
             logger.debug("Subscribed to open3e topics")
         else:
-            logger.error("Failed to connect to MQTT broker: %s", rc)
+            logger.error("Failed to connect to MQTT broker: %s", reason_code)
     
     def _on_message(self, client, userdata, msg):
         """MQTT Message Callback"""
@@ -137,6 +138,13 @@ class Open3EBridge:
             
         except Exception as e:
             logger.error("Error processing message %s: %s", topic, e)
+
+    def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
+        """MQTT Disconnect Callback (paho v2)"""
+        if reason_code == 0:
+            logger.info("Disconnected from MQTT broker")
+        else:
+            logger.warning("Unexpected disconnect from MQTT broker: %s", reason_code)
 
 def main():
     parser = argparse.ArgumentParser(description="Open3E Home Assistant Bridge")
