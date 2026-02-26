@@ -5,5 +5,9 @@ __pycache__/
 .pytest_cache/
 venv/
 .env
-.planning/
 test_device.txt
+
+# Planning & tooling (nicht Teil der Bridge)
+.planning/
+.claude/
+docs/PROJECT_ASSESSMENT.md

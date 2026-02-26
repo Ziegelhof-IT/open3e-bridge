@@ -1,7 +1,7 @@
 """Error handling edge-case tests (TEST-08)."""
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # 1. Malformed topics -> empty list

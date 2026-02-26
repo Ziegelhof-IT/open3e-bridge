@@ -1,7 +1,5 @@
 """Tests that validate() passes on shipped config files and catches problems."""
-import pytest
 import yaml
-from pathlib import Path
 
 from generators.base import BaseGenerator
 

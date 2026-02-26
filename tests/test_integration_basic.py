@@ -1,7 +1,8 @@
 """TEST-INT-BASIC: Basic integration tests with mocked MQTT broker."""
 import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 class FakeMessage:

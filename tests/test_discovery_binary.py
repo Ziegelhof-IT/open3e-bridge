@@ -1,6 +1,5 @@
 """TEST-03: Binary sensor discovery messages."""
 import json
-import pytest
 
 
 class TestBinaryFrostProtection:

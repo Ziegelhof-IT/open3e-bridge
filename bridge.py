@@ -6,26 +6,27 @@ Automatische Erstellung von Home Assistant MQTT Discovery Messages
 aus Open3E Datenpunkten.
 """
 import argparse
+import json
 import logging
+import re
 import signal
 import time
-import json
-from typing import Dict, Set
-import paho.mqtt.client as mqtt
 from pathlib import Path
-import re
+from typing import Dict, Set
+
+import paho.mqtt.client as mqtt
 
 from generators.homeassistant import HomeAssistantGenerator
 
 logger = logging.getLogger("open3e_bridge")
 
 class Open3EBridge:
-    def __init__(self, mqtt_host: str = "localhost", mqtt_port: int = 1883, 
+    def __init__(self, mqtt_host: str = "localhost", mqtt_port: int = 1883,
                  mqtt_user: str = None, mqtt_password: str = None,
                  language: str = "de", test_mode: bool = True,
                  discovery_prefix: str = "homeassistant",
                  add_test_prefix: bool = True):
-        
+
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
         self.mqtt_user = mqtt_user
@@ -33,13 +34,13 @@ class Open3EBridge:
         self.test_mode = test_mode
         self.discovery_prefix = discovery_prefix
         self.add_test_prefix = add_test_prefix
-        
+
         # MQTT Client (paho-mqtt v2 API)
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
-        
+
         if mqtt_user and mqtt_password:
             self.client.username_pw_set(mqtt_user, mqtt_password)
 
@@ -53,13 +54,13 @@ class Open3EBridge:
         # Generator
         config_dir = Path(__file__).parent / "config"
         self.generator = HomeAssistantGenerator(str(config_dir), language, discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix)
-        
+
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
         self.published_configs: Dict[str, str] = {}
-        
+
         logger.info("Open3E Bridge initialized: MQTT=%s:%d lang=%s test=%s prefix=%s",
                     mqtt_host, mqtt_port, language, test_mode, self.generator.discovery_prefix)
-        
+
     def _graceful_shutdown(self, signum=None, frame=None):
         """Graceful shutdown: publish offline LWT, then disconnect."""
         sig_name = signal.Signals(signum).name if signum else "unknown"
@@ -113,7 +114,7 @@ class Open3EBridge:
             logger.debug("Clearing retain: %s", t)
             self.client.publish(t, payload="", retain=True)
         self.client.disconnect()
-    
+
     def _on_connect(self, client, userdata, connect_flags, reason_code, properties):
         """MQTT Connect Callback (paho v2)"""
         if reason_code == 0:
@@ -127,7 +128,7 @@ class Open3EBridge:
             logger.debug("Subscribed to open3e topics and homeassistant/status")
         else:
             logger.error("Failed to connect to MQTT broker: %s", reason_code)
-    
+
     def _republish_all_discovery(self):
         """ROB-01: Re-publish all cached discovery configs (e.g. after HA restart)."""
         count = len(self.published_configs)
@@ -208,7 +209,7 @@ def main():
         level=getattr(logging, args.log_level),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    
+
     # Test Mode nur wenn explizit gewünscht
     test_mode = args.test or bool(args.simulate)
 
@@ -219,7 +220,7 @@ def main():
         discovery_prefix = "homeassistant"
         if test_mode and not args.no_test_prefix:
             discovery_prefix = f"test/{discovery_prefix}"
-    
+
     bridge = Open3EBridge(
         mqtt_host=args.mqtt_host,
         mqtt_port=args.mqtt_port,
@@ -230,7 +231,7 @@ def main():
         discovery_prefix=discovery_prefix,
         add_test_prefix=not args.no_test_prefix
     )
-    
+
     # Validate-only mode
     if args.validate_config:
         # Use the same generator as bridge to validate
@@ -259,7 +260,7 @@ def main():
 def simulate_from_file(bridge: Open3EBridge, filepath: str):
     """Simuliert MQTT Messages aus Datei"""
     logger.info("Simulating MQTT messages from %s", filepath)
-    
+
     try:
         # Ensure MQTT connection for publishing discovery during simulation
         logger.info("Connecting to MQTT broker %s:%d for simulation...", bridge.mqtt_host, bridge.mqtt_port)
@@ -270,13 +271,13 @@ def simulate_from_file(bridge: Open3EBridge, filepath: str):
             def __init__(self, topic, payload):
                 self.topic = topic
                 self.payload = payload.encode('utf-8')
-        
+
         with open(filepath, 'r') as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                    
+
                 # Format: topic payload
                 parts = line.split(' ', 1)
                 if len(parts) == 2:

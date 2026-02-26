@@ -2,11 +2,11 @@
 Basis-Generator für MQTT Discovery Messages
 """
 import logging
-import yaml
-import json
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 logger = logging.getLogger("open3e_bridge.generators")
 
@@ -14,12 +14,12 @@ class BaseGenerator:
     def __init__(self, config_dir: str = "config", language: str = "de"):
         self.config_dir = Path(config_dir)
         self.language = language
-        
+
         # Lade Konfigurationsdateien
         self.datapoints = self._load_yaml(self.config_dir / "datapoints.yaml")
         self.translations = self._load_yaml(self.config_dir / "translations" / f"{language}.yaml")
         self.type_templates = self._load_yaml(self.config_dir / "templates" / "types.yaml")
-        
+
         # Device-Informationen Cache
         self.device_cache = {}
 
@@ -122,23 +122,23 @@ class BaseGenerator:
         except FileNotFoundError:
             logger.warning("Config file not found: %s", filepath)
             return {}
-    
+
     def translate(self, key: str) -> str:
         """Übersetzt einen Schlüssel"""
         return self.translations.get(key, key)
-    
+
     def get_datapoint_config(self, did: int) -> Optional[Dict[str, Any]]:
         """Holt Konfiguration für einen Datenpunkt"""
         return self.datapoints.get("datapoints", {}).get(did)
-    
+
     def get_type_template(self, type_name: str) -> Dict[str, Any]:
         """Holt Template für einen Typ"""
         return self.type_templates.get(type_name, {})
-    
+
     def is_ignored_did(self, did: int) -> bool:
         """Prüft ob DID ignoriert werden soll"""
         return did in self.datapoints.get("ignored_dids", [])
-    
+
     def parse_open3e_topic(self, topic: str) -> Optional[Dict[str, Any]]:
         """
         Parst Open3E MQTT Topic
@@ -148,24 +148,24 @@ class BaseGenerator:
             parts = topic.split('/')
             if len(parts) < 2 or parts[0] != 'open3e':
                 return None
-                
+
             # Parse Hauptteil: 680_268_FlowTemperatureSensor
             main_part = parts[1]
             if '_' not in main_part:
                 return None
-                
+
             # Split bei ersten beiden Underscores
             parts_main = main_part.split('_', 2)
             if len(parts_main) < 3:
                 return None
-                
+
             ecu_addr = parts_main[0]
             did = int(parts_main[1])
             sensor_name = parts_main[2]
-            
+
             # Sub-Item (falls vorhanden). Unterstützt auch tiefere Pfade (z.B. "Mode/ID").
             sub_item = "/".join(parts[2:]) if len(parts) > 2 else None
-            
+
             return {
                 'ecu_addr': ecu_addr,
                 'did': did,
@@ -175,7 +175,7 @@ class BaseGenerator:
             }
         except (ValueError, IndexError):
             return None
-    
+
     def generate_entity_id(self, ecu_addr: str, did: int, sub_item: str = None) -> str:
         """Generiert Entity ID"""
         base_id = f"open3e_{ecu_addr}_{did}"
@@ -185,19 +185,19 @@ class BaseGenerator:
             cleaned = cleaned.replace("/", "_")
             base_id += f"_{cleaned}"
         return base_id
-    
+
     def generate_unique_id(self, ecu_addr: str, did: int, sub_item: str = None) -> str:
         """Generiert Unique ID für Home Assistant"""
         return self.generate_entity_id(ecu_addr, did, sub_item)
-    
+
     def update_device_info(self, ecu_addr: str, did: int, value: str):
         """Aktualisiert Device-Informationen basierend auf MQTT-Nachrichten"""
         device_id_dids = self.datapoints.get("device_identification_dids", {})
-        
+
         # Prüfe ob dieser DID Device-Info enthält
         if did in device_id_dids:
             logger.debug("Found device info in DID %d: %s", did, value)
-            
+
             # Extrahiere Geräte-Info aus dem Wert
             device_info = self._extract_device_info(value)
 
@@ -207,17 +207,17 @@ class BaseGenerator:
                     device_info['serial'] = str(value).strip()
             except Exception:
                 pass
-            
+
             # Cache für diesen ECU
             if ecu_addr not in self.device_cache:
                 self.device_cache[ecu_addr] = {}
-            
+
             self.device_cache[ecu_addr].update(device_info)
-    
+
     def _extract_device_info(self, value: str) -> Dict[str, str]:
         """Extrahiert Geräte-Informationen aus einem Wert"""
         device_patterns = self.datapoints.get("device_patterns", [])
-        
+
         # Versuche Pattern zu matchen
         for pattern_config in device_patterns:
             pattern = pattern_config.get("pattern", "")
@@ -226,22 +226,22 @@ class BaseGenerator:
                     "name": pattern_config.get("name", value),
                     "model": pattern_config.get("model", pattern)
                 }
-        
+
         # Fallback: Verwende den Wert direkt (bereinigt)
         clean_value = re.sub(r'[^a-zA-Z0-9\-\s]', '', value).strip()
         return {
             "name": clean_value or "Open3E System",
             "model": clean_value or "E3 Controller"
         }
-    
+
     def create_device_info(self, ecu_addr: str, device_name: str = None) -> Dict[str, Any]:
         """Erstellt Device-Informationen"""
         # Verwende gecachte Device-Info falls verfügbar
         cached_info = self.device_cache.get(ecu_addr, {})
-        
+
         if not device_name:
             device_name = cached_info.get("name")
-            
+
         if not device_name:
             # Fallback aus Konfiguration
             default_device = self.datapoints.get("default_device", {})
@@ -249,7 +249,7 @@ class BaseGenerator:
             model = default_device.get("model", "E3 Controller")
         else:
             model = cached_info.get("model", device_name)
-        
+
         identifiers = [f"open3e_{ecu_addr}"]
         serial = cached_info.get('serial')
         if serial:
@@ -268,7 +268,7 @@ class BaseGenerator:
             info['sw_version'] = cached_info['sw_version']
 
         return info
-    
+
     def merge_config(self, base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
         """Merged Konfigurationen zusammen"""
         result = base_config.copy()

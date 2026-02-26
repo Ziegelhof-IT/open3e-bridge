@@ -1,8 +1,6 @@
 """Comprehensive tests for BaseGenerator (TEST-CORE)."""
-import pytest
 
 from generators.base import BaseGenerator
-
 
 # ---------------------------------------------------------------------------
 # 1. parse_open3e_topic

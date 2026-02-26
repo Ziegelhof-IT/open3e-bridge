@@ -1,9 +1,9 @@
 """Shared test fixtures for open3e-bridge."""
-import pytest
 from pathlib import Path
 
-from generators.homeassistant import HomeAssistantGenerator
+import pytest
 
+from generators.homeassistant import HomeAssistantGenerator
 
 CONFIG_DIR = str(Path(__file__).resolve().parents[1] / "config")
 

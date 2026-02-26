@@ -1,10 +1,11 @@
 """TEST-CMD: Jinja2 command_template rendering tests, incl. FIX-05 regression."""
 
 import json
-import yaml
+from pathlib import Path
+
 import jinja2
 import pytest
-from pathlib import Path
+import yaml
 
 YAML_PATH = Path(__file__).resolve().parent.parent / "config" / "datapoints.yaml"
 

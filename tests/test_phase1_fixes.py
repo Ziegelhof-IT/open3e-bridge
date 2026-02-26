@@ -1,10 +1,9 @@
 """Tests verifying all Phase 1 fixes are correctly applied (TEST-P1)."""
 import json
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import paho.mqtt.client as mqtt
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -87,4 +86,4 @@ class TestHexFix:
         # Match '%0x' that is NOT preceded by '2' (i.e. not part of '%02x')
         import re
         broken = re.findall(r"(?<!2)%0x", content)
-        assert not broken, f"Found broken hex format '%0x' in datapoints.yaml"
+        assert not broken, "Found broken hex format '%0x' in datapoints.yaml"

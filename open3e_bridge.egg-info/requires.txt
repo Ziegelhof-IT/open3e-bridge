@@ -1,0 +1,8 @@
+paho-mqtt>=2.0
+PyYAML>=6.0
+
+[dev]
+pytest
+pytest-cov
+ruff
+jinja2

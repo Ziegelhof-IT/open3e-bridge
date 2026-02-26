@@ -1,9 +1,8 @@
 """Additional bridge.py tests to increase coverage."""
-import json
 import signal
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, call
-from pathlib import Path
 
 
 class FakeMessage:
@@ -133,7 +132,7 @@ def test_main_cleanup():
 
 # --- simulate_from_file ---
 def test_simulate_from_file(tmp_path):
-    from bridge import simulate_from_file, Open3EBridge
+    from bridge import Open3EBridge, simulate_from_file
     test_file = tmp_path / "test.txt"
     test_file.write_text("# comment\nopen3e/680_268_FlowTemperatureSensor/Actual 42.5\n")
 
@@ -148,7 +147,7 @@ def test_simulate_from_file(tmp_path):
 
 
 def test_simulate_file_not_found():
-    from bridge import simulate_from_file, Open3EBridge
+    from bridge import Open3EBridge, simulate_from_file
     with patch("bridge.mqtt.Client") as MockClient:
         MockClient.return_value = MagicMock()
         bridge = Open3EBridge(test_mode=True, add_test_prefix=False)
@@ -162,7 +161,7 @@ def test_bridge_with_auth():
         mock_client = MagicMock()
         MockClient.return_value = mock_client
         from bridge import Open3EBridge
-        b = Open3EBridge(mqtt_user="user", mqtt_password="pass")
+        Open3EBridge(mqtt_user="user", mqtt_password="pass")
         mock_client.username_pw_set.assert_called_once_with("user", "pass")
 
 

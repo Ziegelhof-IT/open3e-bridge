@@ -1,9 +1,10 @@
 """
 Home Assistant MQTT Discovery Generator
 """
-import logging
 import json
-from typing import Dict, Any, List, Optional, Tuple
+import logging
+from typing import Any, Dict, List, Tuple
+
 from .base import BaseGenerator
 
 logger = logging.getLogger("open3e_bridge.generators.ha")
@@ -17,32 +18,31 @@ class HomeAssistantGenerator(BaseGenerator):
     def generate_discovery_message(self, topic: str, value: str, test_mode: bool = True) -> List[Tuple[str, str]]:
         """
         Generiert Home Assistant Discovery Messages für ein Open3E Topic
-        
+
         Returns:
             List of (discovery_topic, discovery_payload) tuples
         """
         parsed = self.parse_open3e_topic(topic)
         if not parsed:
             return []
-            
+
         did = parsed['did']
         ecu_addr = parsed['ecu_addr']
-        sub_item = parsed['sub_item']
-        
+
         # Prüfe ob DID ignoriert werden soll
         if self.is_ignored_did(did):
             return []
-        
+
         # Aktualisiere Device-Info falls dieser DID Device-Identifikation enthält
         self.update_device_info(ecu_addr, did, value)
-            
+
         # Hole Datenpunkt-Konfiguration
         dp_config = self.get_datapoint_config(did)
         if not dp_config:
             # KEINE Fallback Discovery für unbekannte DIDs
             logger.debug("Skipping unknown DID %d (not configured)", did)
             return []
-            
+
         # Generiere Discovery Messages basierend auf Typ
         results = self._generate_typed_discovery(parsed, dp_config, value, test_mode)
 
@@ -53,22 +53,19 @@ class HomeAssistantGenerator(BaseGenerator):
             results.extend(climate_res)
 
         return results
-    
+
     def _generate_fallback_discovery(self, parsed: Dict[str, Any], value: str, test_mode: bool) -> List[Tuple[str, str]]:
         """Generiert Fallback Discovery für unbekannte DIDs"""
         ecu_addr = parsed['ecu_addr']
         did = parsed['did']
         sub_item = parsed['sub_item'] or 'value'
         sensor_name = parsed['sensor_name']
-        
+
         entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
         unique_id = self.generate_unique_id(ecu_addr, did, sub_item)
-        
-        # Bestimme Entity-Typ basierend auf Wert
-        entity_type = self._guess_entity_type(value)
-        
+
         discovery_topic = self._build_discovery_topic("sensor", entity_id, test_mode)
-        
+
         config = {
             "name": f"{sensor_name} {sub_item}",
             "unique_id": unique_id,
@@ -77,46 +74,46 @@ class HomeAssistantGenerator(BaseGenerator):
             "device": self.create_device_info(ecu_addr),
             "icon": "mdi:help-circle"
         }
-        
+
         # Füge Unit hinzu falls numerisch
         if self._is_numeric(value):
             config["state_class"] = "measurement"
-            
+
         return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
-    
+
     def _generate_typed_discovery(self, parsed: Dict[str, Any], dp_config: Dict[str, Any], value: str, test_mode: bool) -> List[Tuple[str, str]]:
         """Generiert Discovery Messages basierend auf Datenpunkt-Typ"""
         type_name = dp_config.get('type')
         if not type_name:
             return []
-            
+
         type_template = self.get_type_template(type_name)
         if not type_template:
             return []
-            
+
         ecu_addr = parsed['ecu_addr']
         did = parsed['did']
         sub_item = parsed['sub_item']
-        
+
         # Basis-Name aus Übersetzung
         name_key = dp_config.get('name_key', f'did_{did}')
         base_name = self.translate(name_key)
-        
+
         results = []
-        
+
         # Einfacher Sensor (ohne Sub-Items)
         if not sub_item or not dp_config.get('subs'):
             entity_type = type_template.get('entity_type', 'sensor')
             entity_id = self.generate_entity_id(ecu_addr, did)
             unique_id = self.generate_unique_id(ecu_addr, did)
-            
+
             discovery_topic = self._build_discovery_topic(entity_type, entity_id, test_mode)
             config = self._build_entity_config(
-                base_name, unique_id, entity_id, parsed['full_topic'], 
+                base_name, unique_id, entity_id, parsed['full_topic'],
                 ecu_addr, type_template, dp_config, did
             )
             results.append((discovery_topic, json.dumps(config, ensure_ascii=False)))
-            
+
         # Sensor mit Sub-Items
         else:
             sub_config = dp_config.get('subs', {}).get(sub_item, {})
@@ -124,23 +121,23 @@ class HomeAssistantGenerator(BaseGenerator):
                 # Sub-spezifische Konfiguration
                 sub_type = sub_config.get('type', sub_item)
                 sub_name = f"{base_name} {self.translate(sub_type)}"
-                
+
                 entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
                 unique_id = self.generate_unique_id(ecu_addr, did, sub_item)
-                
+
                 # Bestimme Entity-Typ
                 entity_type = sub_config.get('entity_type') or type_template.get('entity_type', 'sensor')
-                
+
                 # Merje Template-Konfiguration
                 merged_template = self.merge_config(type_template, sub_config)
-                
+
                 discovery_topic = self._build_discovery_topic(entity_type, entity_id, test_mode)
                 config = self._build_entity_config(
                     sub_name, unique_id, entity_id, parsed['full_topic'],
                     ecu_addr, merged_template, dp_config, did
                 )
                 results.append((discovery_topic, json.dumps(config, ensure_ascii=False)))
-        
+
         return results
 
     def _generate_climate_discovery(self, parsed: Dict[str, Any], climate_cfg: Dict[str, Any], test_mode: bool) -> List[Tuple[str, str]]:
@@ -197,7 +194,7 @@ class HomeAssistantGenerator(BaseGenerator):
                 config[key] = climate_cfg[key]
 
         return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
-    
+
     def _build_discovery_topic(self, entity_type: str, entity_id: str, test_mode: bool) -> str:
         """Baut Discovery Topic zusammen"""
         # Allow overriding via discovery_prefix; prepend test/ if test_mode is enabled
@@ -205,8 +202,8 @@ class HomeAssistantGenerator(BaseGenerator):
         if self.add_test_prefix and test_mode and not prefix.startswith("test/"):
             prefix = f"test/{prefix}"
         return f"{prefix}/{entity_type}/{entity_id}/config"
-    
-    def _build_entity_config(self, name: str, unique_id: str, entity_id: str, state_topic: str, 
+
+    def _build_entity_config(self, name: str, unique_id: str, entity_id: str, state_topic: str,
                            ecu_addr: str, template: Dict[str, Any], dp_config: Dict[str, Any], did: int) -> Dict[str, Any]:
         """Baut Entity-Konfiguration zusammen"""
         config = {
@@ -220,7 +217,7 @@ class HomeAssistantGenerator(BaseGenerator):
             "payload_available": "online",
             "payload_not_available": "offline",
         }
-        
+
         # Template-Eigenschaften übernehmen
         for key in ['device_class', 'unit_of_measurement', 'icon', 'state_class', 'mode', 'payload_on', 'payload_off', 'value_template', 'command_template', 'options']:
             if key in template:
@@ -230,7 +227,7 @@ class HomeAssistantGenerator(BaseGenerator):
         for key in ['device_class', 'unit_of_measurement', 'icon', 'state_class', 'mode', 'payload_on', 'payload_off', 'value_template', 'command_template', 'options']:
             if key in dp_config:
                 config[key] = dp_config[key]
-        
+
         # Origin information
         config["origin"] = {
             "name": "Open3E Bridge",
@@ -241,21 +238,21 @@ class HomeAssistantGenerator(BaseGenerator):
         # Schreibbare Entities
         if dp_config.get('writable') or template.get('writable'):
             config["command_topic"] = "open3e/cmnd"
-            
+
             # Min/Max/Step für Number-Entities
             for attr in ['min', 'max', 'step']:
                 if attr in dp_config:
                     config[attr] = dp_config[attr]
                 elif attr in template:
                     config[attr] = template[attr]
-                    
+
             # Command Template (vereinfacht für Test)
             if template.get('entity_type') == 'number' and 'command_template' not in config:
                 write_mode = dp_config.get('write_mode', 'write')
                 config["command_template"] = f'{{"mode": "{write_mode}", "data": [[{did}, "{{{{ value }}}}"]]}}'
-        
+
         return config
-    
+
     def _guess_entity_type(self, value: str) -> str:
         """Rät Entity-Typ basierend auf Wert"""
         if self._is_numeric(value):
@@ -264,7 +261,7 @@ class HomeAssistantGenerator(BaseGenerator):
             return "binary_sensor"
         else:
             return "sensor"
-    
+
     def _is_numeric(self, value: str) -> bool:
         """Prüft ob Wert numerisch ist"""
         try:
