@@ -118,3 +118,41 @@ def test_energy_sensor_discovery(generator_en):
     assert p["device_class"] == "energy"
     assert p["unit_of_measurement"] == "kWh"
     assert p["state_class"] == "total_increasing"
+
+
+# ---------------------------------------------------------------------------
+# TEST DATA-03/05: Status DIDs
+# ---------------------------------------------------------------------------
+
+def test_four_way_valve_discovery(generator_en):
+    topic = "open3e/680_2335_FourWayValve"
+    disc_topic, p = _discover(generator_en, topic, "0")
+    assert "/sensor/" in disc_topic
+    assert p["name"] == "Four-Way Valve"
+    assert "value_template" in p
+
+
+def test_compressor_speed_discovery(generator_en):
+    topic = "open3e/680_2346_CompressorSpeed"
+    disc_topic, p = _discover(generator_en, topic, "45")
+    assert "/sensor/" in disc_topic
+    assert p["name"] == "Compressor Speed"
+    assert p["unit_of_measurement"] == "%"
+    assert p["state_class"] == "measurement"
+
+
+def test_primary_hx_temperature_discovery(generator_en):
+    topic = "open3e/680_354_PrimaryHeatExchanger/Actual"
+    disc_topic, p = _discover(generator_en, topic, "28.5")
+    assert "/sensor/" in disc_topic
+    assert p["device_class"] == "temperature"
+    assert p["unit_of_measurement"] == "°C"
+
+
+def test_pv_power_generation_discovery(generator_en):
+    topic = "open3e/680_1834_PVPowerGeneration"
+    disc_topic, p = _discover(generator_en, topic, "2500")
+    assert "/sensor/" in disc_topic
+    assert p["device_class"] == "power"
+    assert p["unit_of_measurement"] == "W"
+    assert p["icon"] == "mdi:solar-power"

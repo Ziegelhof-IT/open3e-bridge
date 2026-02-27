@@ -93,6 +93,25 @@ class TestDID2626Safe01:
         assert result["data"][0][0] == 2626
 
 
+# ── DID 2335: FourWayValve value_template ─────────────────────────
+class TestDID2335:
+    @pytest.fixture(autouse=True)
+    def _load(self):
+        self.tmpl = _load_datapoints()[2335]["value_template"]
+
+    @pytest.mark.parametrize("value,expected", [
+        (0, "Heizen"),
+        (1, "Abtauen"),
+        (2, "Warmwasser"),
+        (3, "Kuehlen"),
+        (99, "99"),
+    ])
+    def test_value_mapping(self, value, expected):
+        tmpl = _env().from_string(self.tmpl)
+        result = tmpl.render(value=value).strip()
+        assert result == expected
+
+
 # ── DID 1710: DomesticHotWaterOneTimeCharge Button ────────────────
 class TestDID1710:
     @pytest.fixture(autouse=True)

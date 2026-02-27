@@ -326,6 +326,46 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
           {{ cmd | to_json }}
 
+  # --- Status-DIDs (DATA-03 + DATA-05) ---
+
+  2335:  # FourWayValve
+    type: "generic_sensor"
+    name_key: "four_way_valve"
+    icon: "mdi:valve"
+    value_template: >
+      {% set state = value | int %}
+      {% if state == 0 %}Heizen
+      {% elif state == 1 %}Abtauen
+      {% elif state == 2 %}Warmwasser
+      {% elif state == 3 %}Kuehlen
+      {% else %}{{ value }}{% endif %}
+
+  2346:  # CompressorSpeed (%)
+    type: "pump_sensor"
+    name_key: "compressor_speed"
+
+  2569:  # CompressorSpeedRPS
+    type: "generic_sensor"
+    name_key: "compressor_speed_rps"
+    unit_of_measurement: "rps"
+    state_class: "measurement"
+
+  354:  # PrimaryHeatExchanger
+    type: "temperature_sensor"
+    name_key: "primary_hx_temperature"
+    subs:
+      Actual: { type: "current" }
+
+  1690:  # PVStatus
+    type: "generic_sensor"
+    name_key: "pv_status"
+    icon: "mdi:solar-power"
+
+  1834:  # PVPowerGeneration
+    type: "power_sensor"
+    name_key: "pv_power_generation"
+    icon: "mdi:solar-power"
+
   # Heizkreis 1/2 Betriebsmodi: off/auto als Select
   1415:  # MixerOneCircuitOperationState
     type: "select_mode"
