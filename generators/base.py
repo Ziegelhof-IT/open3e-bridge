@@ -28,6 +28,16 @@ class BaseGenerator:
         errors: List[str] = []
         warnings: List[str] = []
 
+        # Validate write_blacklisted_dids
+        wbl = self.datapoints.get('write_blacklisted_dids')
+        if wbl is not None:
+            if not isinstance(wbl, list):
+                errors.append("write_blacklisted_dids must be a list")
+            else:
+                for item in wbl:
+                    if not isinstance(item, int):
+                        errors.append(f"write_blacklisted_dids: '{item}' is not an integer")
+
         # Check type templates present
         available_types = set(k for k in self.type_templates.keys() if k != 'sub_type_templates')
 

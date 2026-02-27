@@ -348,6 +348,37 @@ def test_simulate_generic_exception():
         simulate_from_file(bridge, "/some/file.txt")
 
 
+# --- Cleanup regex matches switch/button ---
+
+def test_cleanup_matches_switch_topic(mock_bridge):
+    """Cleanup regex matches switch entity topics."""
+    bridge, mock_client = mock_bridge
+    prefix = bridge.generator.discovery_prefix
+
+    def fake_loop_start():
+        on_connect = bridge.client.on_connect
+        on_connect(mock_client, None, {}, 0, None)
+        on_message = bridge.client.on_message
+        for etype in ("switch", "button"):
+            msg = FakeMessage(
+                f"{prefix}/{etype}/open3e_680_1006/config", "payload", retain=True,
+            )
+            on_message(mock_client, None, msg)
+
+    mock_client.loop_start.side_effect = fake_loop_start
+
+    with patch("bridge.time.sleep"):
+        bridge.cleanup()
+
+    clear_calls = [
+        c for c in mock_client.publish.call_args_list
+        if c[1].get("payload") == "" or (len(c[0]) > 1 and c[0][1] == "")
+    ]
+    clear_topics = [c[0][0] for c in clear_calls]
+    assert f"{prefix}/switch/open3e_680_1006/config" in clear_topics
+    assert f"{prefix}/button/open3e_680_1006/config" in clear_topics
+
+
 # --- Branch: cleanup _on_message with retain=False (98->exit) ---
 
 def test_cleanup_non_retained_message_ignored(mock_bridge):

@@ -2,8 +2,6 @@
 # Community-maintained - kann direkt editiert werden
 
 datapoints:
-  # TEST: Nur 2 Datenpunkte für ersten Test
-  
   268:  # FlowTemperatureSensor - Multi-Value Sensor
     type: "temperature_sensor"
     name_key: "flow_temperature"

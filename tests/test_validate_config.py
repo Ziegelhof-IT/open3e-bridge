@@ -58,6 +58,42 @@ class TestValidateDetectsProblems:
         result = gen.validate()
         assert any("unknown type" in e for e in result["errors"])
 
+    def test_validate_write_blacklisted_dids_not_list(self, tmp_path):
+        cfg_dir = self._write_minimal_config(
+            tmp_path,
+            datapoints_override={
+                "datapoints": {},
+                "write_blacklisted_dids": "not_a_list",
+            },
+        )
+        gen = BaseGenerator(config_dir=cfg_dir, language="de")
+        result = gen.validate()
+        assert any("write_blacklisted_dids must be a list" in e for e in result["errors"])
+
+    def test_validate_write_blacklisted_dids_non_int(self, tmp_path):
+        cfg_dir = self._write_minimal_config(
+            tmp_path,
+            datapoints_override={
+                "datapoints": {},
+                "write_blacklisted_dids": [875, "bad"],
+            },
+        )
+        gen = BaseGenerator(config_dir=cfg_dir, language="de")
+        result = gen.validate()
+        assert any("'bad' is not an integer" in e for e in result["errors"])
+
+    def test_validate_write_blacklisted_dids_valid(self, tmp_path):
+        cfg_dir = self._write_minimal_config(
+            tmp_path,
+            datapoints_override={
+                "datapoints": {},
+                "write_blacklisted_dids": [875],
+            },
+        )
+        gen = BaseGenerator(config_dir=cfg_dir, language="de")
+        result = gen.validate()
+        assert result["errors"] == []
+
     def test_validate_jinja_syntax_error(self, tmp_path):
         cfg_dir = self._write_minimal_config(
             tmp_path,
