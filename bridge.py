@@ -107,7 +107,7 @@ class Open3EBridge:
         self.client.loop_start()
         time.sleep(timeout_s)
 
-        pattern = re.compile(rf"^{re.escape(self.generator.discovery_prefix)}/(sensor|number|select|binary_sensor|climate)/open3e_[^/]+/config$")
+        pattern = re.compile(rf"^{re.escape(self.generator.discovery_prefix)}/(sensor|number|select|binary_sensor|climate|switch|button)/open3e_[^/]+/config$")
         targets = [t for t in retained if pattern.match(t)]
         logger.info("Found %d retained under prefix, %d matching open3e entities.", len(retained), len(targets))
         for t in targets:

@@ -132,6 +132,11 @@ smart_grid:
       entity_type: "sensor"
       icon: "mdi:information"
 
+# Switch (stateful toggle)
+switch_toggle:
+  entity_type: "switch"
+  icon: "mdi:toggle-switch"
+
 # Binary on/off sensors
 binary_onoff:
   entity_type: "binary_sensor"

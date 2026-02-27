@@ -93,6 +93,23 @@ class TestDID2626Safe01:
         assert result["data"][0][0] == 2626
 
 
+# ── DID 1006: QuickMode Switch ────────────────────────────────────
+class TestDID1006:
+    @pytest.fixture(autouse=True)
+    def _load(self):
+        self.tmpl = _load_datapoints()[1006]["command_template"]
+
+    def test_switch_on(self):
+        result = _render(self.tmpl, value="ON")
+        assert result["mode"] == "write"
+        assert result["data"] == [[1006, "ON"]]
+
+    def test_switch_off(self):
+        result = _render(self.tmpl, value="OFF")
+        assert result["mode"] == "write"
+        assert result["data"] == [[1006, "OFF"]]
+
+
 # ── DID 1102 Setpoint: FIX-05 regression ─────────────────────────
 class TestDID1102Setpoint:
     @pytest.fixture(autouse=True)

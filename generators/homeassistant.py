@@ -12,8 +12,8 @@ logger = logging.getLogger("open3e_bridge.generators.ha")
 # Keys merged from type templates and dp_config overrides into entity config
 _ENTITY_KEYS = (
     'device_class', 'unit_of_measurement', 'icon', 'state_class',
-    'mode', 'payload_on', 'payload_off', 'value_template',
-    'command_template', 'options',
+    'mode', 'payload_on', 'payload_off', 'state_on', 'state_off',
+    'value_template', 'command_template', 'options',
 )
 
 
