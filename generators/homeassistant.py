@@ -146,7 +146,7 @@ class HomeAssistantGenerator(BaseGenerator):
             'name': name,
             'unique_id': unique_id,
             'default_entity_id': entity_id,
-            'device': self.create_device_info(ecu_addr),
+            'device': self.create_device_info_for_did(ecu_addr, did),
             'availability_topic': 'open3e/LWT',
             'payload_available': 'online',
             'payload_not_available': 'offline',
@@ -198,7 +198,7 @@ class HomeAssistantGenerator(BaseGenerator):
             "name": name,
             "unique_id": unique_id,
             "default_entity_id": entity_id,
-            "device": self.create_device_info(ecu_addr),
+            "device": self.create_device_info_for_did(ecu_addr, did),
             # Basic availability (expects open3e to publish LWT)
             "availability_topic": "open3e/LWT",
             "payload_available": "online",

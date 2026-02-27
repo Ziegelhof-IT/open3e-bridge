@@ -1,10 +1,32 @@
 # Open3E Datapoint Definitions - TEST VERSION
 # Community-maintained - edit directly
 
+# Physical device definitions (DID → device mapping)
+devices:
+  outdoor:
+    name: "Vitocal 250-A Outdoor Unit"
+    model: "Vitocal 250-A"
+  indoor:
+    name: "Vitocal 252-A Indoor Unit"
+    model: "Vitocal 252-A"
+  tank:
+    name: "Vitocell 100-E Hot Water Tank"
+    model: "Vitocell 100-E"
+  mixer:
+    name: "Heating Circuit Mixer"
+    model: "Mixer Module"
+  heater:
+    name: "Auxiliary Heater"
+    model: "Electric Heater"
+  energy:
+    name: "Energy Management"
+    model: "PV/Grid"
+
 datapoints:
   268:  # FlowTemperatureSensor - Multi-Value Sensor
     type: "temperature_sensor"
     name: "Flow Temperature"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
       Minimum: { suffix: "min" }
@@ -15,24 +37,28 @@ datapoints:
   269:  # ReturnTemperatureSensor
     type: "temperature_sensor"
     name: "Return Temperature"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
   274:  # OutsideTemperatureSensor
     type: "temperature_sensor"
     name: "Outside Temperature"
+    device: "outdoor"
     subs:
       Actual: { suffix: "current" }
 
   318:  # WaterPressureSensor
     type: "pressure_sensor"
     name: "Water Pressure"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
   271:  # DomesticHotWaterSensor
     type: "temperature_sensor"
     name: "Hot Water"
+    device: "tank"
     subs:
       Actual: { suffix: "" }
 
@@ -40,40 +66,35 @@ datapoints:
   284:  # MixerOneCircuitFlowTemperatureSensor
     type: "temperature_sensor"
     name: "Circuit 1 Flow Temperature"
+    device: "mixer"
     subs:
       Actual: { suffix: "current" }
 
   286:  # MixerTwoCircuitFlowTemperatureSensor
     type: "temperature_sensor"
     name: "Circuit 2 Flow Temperature"
+    device: "mixer"
     subs:
       Actual: { suffix: "current" }
 
-  # Heating buffer temperatures (if present)
-  277:  # BufferBottomTemperatureSensor
+  # Heating buffer temperature (Vitocell Pufferspeicher)
+  3016:  # HeatingBufferTemperatureSensor
     type: "temperature_sensor"
-    name: "Buffer Temperature Bottom"
+    name: "Heating Buffer Temperature"
+    device: "tank"
     subs:
-      Actual: { suffix: "current" }
-  279:  # BufferMidTemperatureSensor
-    type: "temperature_sensor"
-    name: "Buffer Temperature Middle"
-    subs:
-      Actual: { suffix: "current" }
-  281:  # BufferTopTemperatureSensor
-    type: "temperature_sensor"
-    name: "Buffer Temperature Top"
-    subs:
-      Actual: { suffix: "current" }
+      Actual: { suffix: "" }
 
   # Power and thermal capacity (for dashboards and COP calcs)
   2496:  # CurrentThermalCapacitySystem (W)
     type: "power_sensor"
     name: "Thermal Power (System)"
+    device: "indoor"
 
   1603:  # PointOfCommonCouplingPower
     type: "power_sensor"
     name: "Grid Active Power"
+    device: "energy"
     subs:
       ActivePower: { suffix: "current" }
 
@@ -81,6 +102,7 @@ datapoints:
   535:  # ObjectElectricalEnergyStatistical
     type: "energy_sensor"
     name: "Electrical Energy Statistics"
+    device: "indoor"
     subs:
       GridSuppliedEnergy: { }
       ProducedEnergy: { }
@@ -89,11 +111,13 @@ datapoints:
   377:  # IdentNumber - for device identification
     type: "device_info"
     name: "Device Identification"
+    device: "indoor"
     extract_serial: true
 
   396:  # DomesticHotWaterTemperatureSetpoint - Writable Setpoint
     type: "temperature_setpoint"
     name: "DHW Setpoint"
+    device: "tank"
     min: 10
     max: 65
     step: 0.5
@@ -104,12 +128,14 @@ datapoints:
   2442:  # HeatPumpFrostProtection
     type: "binary_onoff"
     name: "Heat Pump Frost Protection"
+    device: "heater"
     payload_off: "0.0"
     payload_on: "1.0"
 
   401:  # MixerOneCircuitPump (HK1 pump status)
     type: "binary_onoff"
     name: "Circuit 1 Pump"
+    device: "mixer"
     icon: "mdi:pump"
     payload_off: "0.0"
     payload_on: "1.0"
@@ -117,19 +143,23 @@ datapoints:
   2488:  # CurrentElectricalPowerConsumptionSystem
     type: "power_sensor"
     name: "Power Consumption (System)"
+    device: "indoor"
 
   1775:  # PrimaryCircuitFanOne (%)
     type: "pump_sensor"
     name: "Primary Circuit Fan 1"
+    device: "outdoor"
 
   1776:  # PrimaryCircuitFanTwo (%)
     type: "pump_sensor"
     name: "Primary Circuit Fan 2"
+    device: "outdoor"
 
   # Writable number (DID 2626)
   2626:  # MaximumPowerElectricalHeater (W)
     type: "power_sensor"
     name: "Max Power Electric Heater"
+    device: "heater"
     writable: true
     min: 0
     max: 8000
@@ -149,18 +179,21 @@ datapoints:
   2855:  # HK1 frost protection config
     type: "binary_onoff"
     name: "Circuit 1 Frost Protection"
+    device: "mixer"
     payload_off: "0.0"
     payload_on: "1.0"
 
   2856:  # HK2 frost protection config
     type: "binary_onoff"
     name: "Circuit 2 Frost Protection"
+    device: "mixer"
     payload_off: "0.0"
     payload_on: "1.0"
 
   402:  # MixerTwoCircuitPump (HK2 pump status)
     type: "binary_onoff"
     name: "Circuit 2 Pump"
+    device: "mixer"
     icon: "mdi:pump"
     payload_off: "0.0"
     payload_on: "1.0"
@@ -168,12 +201,14 @@ datapoints:
   2351:  # HeatPumpCompressor
     type: "binary_onoff"
     name: "Compressor Status"
+    device: "outdoor"
     payload_off: "0.0"
     payload_on: "1.0"
 
   2352:  # AdditionalElectricHeater
     type: "binary_onoff"
     name: "Additional Heater Status"
+    device: "heater"
     payload_off: "0000"
     payload_on: "0100"
 
@@ -181,24 +216,28 @@ datapoints:
   1770:  # SecondaryOutletTemperatureSensor
     type: "temperature_sensor"
     name: "Secondary Circuit Supply Temperature"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
   1771:  # EngineRoomTemperatureSensor
     type: "temperature_sensor"
     name: "Boiler Room Temperature"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
   2333:  # EconomizerLiquidTemperatureSensor
     type: "temperature_sensor"
     name: "Condenser Liquid Temperature"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
   2334:  # EvaporatorVaporTemperatureSensor
     type: "temperature_sensor"
     name: "Evaporator Vapor Temperature"
+    device: "outdoor"
     subs:
       Actual: { suffix: "current" }
 
@@ -206,6 +245,7 @@ datapoints:
   2350:  # EnergyManagmentSystemResultingControlState
     type: "generic_sensor"
     name: "Smart Grid Operating State"
+    device: "indoor"
     icon: "mdi:home-variant"
     value_template: >
       {% set ostate = int(value) %}
@@ -225,12 +265,14 @@ datapoints:
   875:  # LegionellaProtectionActivationTime
     type: "generic_sensor"
     name: "Legionella Protection Activation Time"
+    device: "indoor"
     icon: "mdi:shield-bug"
 
   # DomesticHotWaterOneTimeCharge - stateless Button
   1710:  # DomesticHotWaterOneTimeCharge
     type: "button_action"
     name: "DHW One-Time Charge"
+    device: "tank"
     writable: true
     payload_press: "PRESS"
     command_template: >
@@ -241,6 +283,7 @@ datapoints:
   1006:  # QuickMode
     type: "switch_toggle"
     name: "Quick Mode"
+    device: "indoor"
     writable: true
     payload_on: "1"
     payload_off: "0"
@@ -254,6 +297,7 @@ datapoints:
   1102:  # MixerOneCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"
     name: "Circuit 1 Pump"
+    device: "mixer"
     subs:
       Setpoint:
         entity_type: "number"
@@ -273,6 +317,7 @@ datapoints:
   1192:  # MixerOneCircuitFlowTemperatureMinimumMaximumLimit
     type: "temperature_setpoint"
     name: "Circuit 1 Flow Temperature"
+    device: "mixer"
     subs:
       Minimum:
         entity_type: "number"
@@ -308,6 +353,7 @@ datapoints:
   1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"
     name: "Circuit 2 Pump"
+    device: "mixer"
     subs:
       Setpoint:
         entity_type: "number"
@@ -328,6 +374,7 @@ datapoints:
   2335:  # FourWayValve
     type: "generic_sensor"
     name: "Four-Way Valve"
+    device: "indoor"
     icon: "mdi:valve"
     value_template: >
       {% set state = value | int %}
@@ -340,33 +387,39 @@ datapoints:
   2346:  # CompressorSpeed (%)
     type: "pump_sensor"
     name: "Compressor Speed"
+    device: "outdoor"
 
   2569:  # CompressorSpeedRPS
     type: "generic_sensor"
     name: "Compressor Speed (rps)"
+    device: "outdoor"
     unit_of_measurement: "rps"
     state_class: "measurement"
 
   354:  # PrimaryHeatExchanger
     type: "temperature_sensor"
     name: "Primary Heat Exchanger Temperature"
+    device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
   1690:  # PVStatus
     type: "generic_sensor"
     name: "PV Status"
+    device: "energy"
     icon: "mdi:solar-power"
 
   1834:  # PVPowerGeneration
     type: "power_sensor"
     name: "PV Power Generation"
+    device: "energy"
     icon: "mdi:solar-power"
 
   # Heating circuit 1/2 operation modes: off/auto as Select
   1415:  # MixerOneCircuitOperationState
     type: "select_mode"
     name: "Circuit 1 Operation Mode"
+    device: "mixer"
     subs:
       Mode/ID:
         entity_type: "select"
@@ -414,6 +467,7 @@ datapoints:
   1416:  # MixerTwoCircuitOperationState
     type: "select_mode"
     name: "Circuit 2 Operation Mode"
+    device: "mixer"
     subs:
       Mode/ID:
         entity_type: "select"

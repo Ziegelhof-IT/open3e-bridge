@@ -39,9 +39,7 @@ names:
   "PV Power Generation": "PV Stromerzeugung"
   "Device Identification": "Geräte-Identifikation"
   "Smart Grid Operating State": "Smart Grid Betriebszustand"
-  "Buffer Temperature Bottom": "Pufferspeicher Temperatur unten"
-  "Buffer Temperature Middle": "Pufferspeicher Temperatur Mitte"
-  "Buffer Temperature Top": "Pufferspeicher Temperatur oben"
+  "Heating Buffer Temperature": "Temperatur Pufferspeicher"
   "Thermal Power (System)": "Thermische Leistung (System)"
   "Grid Active Power": "Netz Wirkleistung"
   "Electrical Energy Statistics": "Elektrische Energie Statistik"
@@ -53,6 +51,14 @@ suffixes:
   "avg": "Durchschnitt"
   "unknown": "Unbekannt"
   "error": "Fehler"
+
+devices:
+  "Vitocal 250-A Outdoor Unit": "Vitocal 250-A Ausseneinheit"
+  "Vitocal 252-A Indoor Unit": "Vitocal 252-A Inneneinheit"
+  "Vitocell 100-E Hot Water Tank": "Vitocell 100-E Warmwasserspeicher"
+  "Heating Circuit Mixer": "Heizkreismischer"
+  "Auxiliary Heater": "Zusatzheizung"
+  "Energy Management": "Energiemanagement"
 
 strings:
   "suggested_area": "Heizung"

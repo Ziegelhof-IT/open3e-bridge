@@ -67,6 +67,12 @@ class BaseGenerator:
             return fallback or key
         return self.translations.get("strings", {}).get(key, fallback or key)
 
+    def translate_device_name(self, name: str) -> str:
+        """Translate device name. EN: passthrough, other: overlay with EN fallback."""
+        if self.language == "en":
+            return name
+        return self.translations.get("devices", {}).get(name, name)
+
     def resolve_name(self, did: int, sub_item: str | None, computed_name: str) -> str:
         """Apply user name override if configured. Falls back to computed_name."""
         # Dual lookup: YAML parses 271 as int, "271" as str
@@ -142,6 +148,14 @@ class BaseGenerator:
                     warnings.append(
                         f"DID {key}: name '{name}' missing in {self.language} translations"
                     )
+
+            # Device reference
+            device_ref = cfg.get('device')
+            if device_ref is not None:
+                if not isinstance(device_ref, str):
+                    errors.append(f"DID {key}: 'device' must be a string")
+                elif device_ref not in self.datapoints.get('devices', {}):
+                    errors.append(f"DID {key}: device '{device_ref}' not found in devices block")
 
             # Options type
             if 'options' in cfg and not isinstance(cfg['options'], list):
@@ -357,6 +371,30 @@ class BaseGenerator:
             info['sw_version'] = cached_info['sw_version']
 
         return info
+
+    def create_device_info_for_did(self, ecu_addr: str, did: int) -> Dict[str, Any]:
+        """Create device info for a specific DID, using per-device mapping if configured."""
+        dp_config = self.get_datapoint_config(did)
+        device_key = dp_config.get('device') if dp_config else None
+
+        if not device_key:
+            return self.create_device_info(ecu_addr)
+
+        devices = self.datapoints.get('devices', {})
+        device_def = devices.get(device_key)
+        if not device_def:
+            return self.create_device_info(ecu_addr)
+
+        name = self.translate_device_name(device_def.get('name', device_key))
+        model = device_def.get('model', name)
+
+        return {
+            "identifiers": [f"open3e_{ecu_addr}_{device_key}"],
+            "name": name,
+            "manufacturer": "Viessmann",
+            "model": model,
+            "suggested_area": self.translate_string("suggested_area", "Heating"),
+        }
 
     def merge_config(self, base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
         """Merge configs together"""
