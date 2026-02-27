@@ -132,6 +132,11 @@ smart_grid:
       entity_type: "sensor"
       icon: "mdi:information"
 
+# Button (stateless action)
+button_action:
+  entity_type: "button"
+  icon: "mdi:button-pointer"
+
 # Switch (stateful toggle)
 switch_toggle:
   entity_type: "switch"

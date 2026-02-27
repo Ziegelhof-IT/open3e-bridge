@@ -224,6 +224,16 @@ datapoints:
         {{ value }}
       {% endif %}
 
+  # DomesticHotWaterOneTimeCharge — stateless Button
+  1710:  # DomesticHotWaterOneTimeCharge
+    type: "button_action"
+    name_key: "dhw_one_time_charge"
+    writable: true
+    payload_press: "PRESS"
+    command_template: >
+      {% set cmd = {'mode': 'write', 'data': [[1710, 1]]} %}
+      {{ cmd | to_json }}
+
   # QuickMode (Schnellmodus) — Switch: on=1, off=0
   1006:  # QuickMode
     type: "switch_toggle"

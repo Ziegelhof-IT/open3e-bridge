@@ -13,8 +13,11 @@ logger = logging.getLogger("open3e_bridge.generators.ha")
 _ENTITY_KEYS = (
     'device_class', 'unit_of_measurement', 'icon', 'state_class',
     'mode', 'payload_on', 'payload_off', 'state_on', 'state_off',
-    'value_template', 'command_template', 'options',
+    'payload_press', 'value_template', 'command_template', 'options',
 )
+
+# Entity types that have no persistent state (no state_topic)
+_STATELESS_ENTITY_TYPES = frozenset({"button"})
 
 
 class HomeAssistantGenerator(BaseGenerator):
@@ -91,7 +94,7 @@ class HomeAssistantGenerator(BaseGenerator):
             discovery_topic = self._build_discovery_topic(entity_type, entity_id, test_mode)
             config = self._build_entity_config(
                 base_name, unique_id, entity_id, parsed['full_topic'],
-                ecu_addr, type_template, dp_config, did
+                ecu_addr, type_template, dp_config, did, entity_type=entity_type
             )
             results.append((discovery_topic, json.dumps(config, ensure_ascii=False)))
 
@@ -115,7 +118,7 @@ class HomeAssistantGenerator(BaseGenerator):
                 discovery_topic = self._build_discovery_topic(entity_type, entity_id, test_mode)
                 config = self._build_entity_config(
                     sub_name, unique_id, entity_id, parsed['full_topic'],
-                    ecu_addr, merged_template, dp_config, did
+                    ecu_addr, merged_template, dp_config, did, entity_type=entity_type
                 )
                 results.append((discovery_topic, json.dumps(config, ensure_ascii=False)))
 
@@ -185,19 +188,23 @@ class HomeAssistantGenerator(BaseGenerator):
         return f"{prefix}/{entity_type}/{entity_id}/config"
 
     def _build_entity_config(self, name: str, unique_id: str, entity_id: str, state_topic: str,
-                           ecu_addr: str, template: Dict[str, Any], dp_config: Dict[str, Any], did: int) -> Dict[str, Any]:
+                           ecu_addr: str, template: Dict[str, Any], dp_config: Dict[str, Any],
+                           did: int, entity_type: str = "sensor") -> Dict[str, Any]:
         """Baut Entity-Konfiguration zusammen"""
         config = {
             "name": name,
             "unique_id": unique_id,
             "default_entity_id": entity_id,
-            "state_topic": state_topic,
             "device": self.create_device_info(ecu_addr),
             # Basic availability (expects open3e to publish LWT)
             "availability_topic": "open3e/LWT",
             "payload_available": "online",
             "payload_not_available": "offline",
         }
+
+        # Stateless entity types (e.g. button) have no state_topic
+        if entity_type not in _STATELESS_ENTITY_TYPES:
+            config["state_topic"] = state_topic
 
         # Template-Eigenschaften übernehmen
         for key in _ENTITY_KEYS:

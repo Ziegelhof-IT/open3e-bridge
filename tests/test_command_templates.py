@@ -93,6 +93,18 @@ class TestDID2626Safe01:
         assert result["data"][0][0] == 2626
 
 
+# ── DID 1710: DomesticHotWaterOneTimeCharge Button ────────────────
+class TestDID1710:
+    @pytest.fixture(autouse=True)
+    def _load(self):
+        self.tmpl = _load_datapoints()[1710]["command_template"]
+
+    def test_button_press(self):
+        result = _render(self.tmpl, value="PRESS")
+        assert result["mode"] == "write"
+        assert result["data"] == [[1710, 1]]
+
+
 # ── DID 1006: QuickMode Switch ────────────────────────────────────
 class TestDID1006:
     @pytest.fixture(autouse=True)
