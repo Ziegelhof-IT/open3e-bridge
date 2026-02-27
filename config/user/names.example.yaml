@@ -1,0 +1,17 @@
+# User name overrides — copy to names.yaml and edit
+# Survives git pull (config/user/ is gitignored).
+# Takes precedence over translations and datapoints.yaml.
+#
+# Format: DID number → string or dict
+#
+# ACHTUNG: String-Override auf Multi-Sub DID (z.B. 268) macht alle Subs gleich.
+# Fuer Multi-Sub DIDs Dict-Format verwenden.
+
+names:
+  # String: replaces the full entity name
+  # 396: "WW Soll"
+
+  # Dict: override per sub-item (for multi-sub DIDs)
+  # 268:
+  #   Actual: "Vorlauf Ist"
+  #   Maximum: "Vorlauf Max"

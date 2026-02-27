@@ -81,6 +81,7 @@ class HomeAssistantGenerator(BaseGenerator):
 
         # Entity name from English canonical + translation + user override
         base_name = self.translate_name(dp_config.get('name', f'DID {did}'))
+        base_name = self.resolve_name(did, None, base_name)
 
         results = []
 
@@ -105,6 +106,7 @@ class HomeAssistantGenerator(BaseGenerator):
                 suffix_key = sub_config.get('suffix', sub_item)
                 translated_suffix = self.translate_suffix(suffix_key)
                 sub_name = f"{base_name} {translated_suffix}" if translated_suffix else base_name
+                sub_name = self.resolve_name(did, sub_item, sub_name)
 
                 entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
                 unique_id = self.generate_unique_id(ecu_addr, did, sub_item)
@@ -138,6 +140,7 @@ class HomeAssistantGenerator(BaseGenerator):
         discovery_topic = self._build_discovery_topic('climate', entity_id, test_mode)
 
         name = self.translate_name(climate_cfg.get('name', 'Climate'))
+        name = self.resolve_name(did, None, name)
 
         config: Dict[str, Any] = {
             'name': name,

@@ -34,6 +34,13 @@ class BaseGenerator:
         else:
             self.translations = {}
 
+        # Load optional user name overrides (survives updates)
+        user_names_path = self.config_dir / "user" / "names.yaml"
+        if user_names_path.exists():
+            self.user_names = self._load_yaml(user_names_path).get("names", {})
+        else:
+            self.user_names = {}
+
         # Device info cache
         self.device_cache = {}
 
@@ -59,6 +66,20 @@ class BaseGenerator:
         if self.language == "en":
             return fallback or key
         return self.translations.get("strings", {}).get(key, fallback or key)
+
+    def resolve_name(self, did: int, sub_item: str | None, computed_name: str) -> str:
+        """Apply user name override if configured. Falls back to computed_name."""
+        # Dual lookup: YAML parses 271 as int, "271" as str
+        override = self.user_names.get(did) or self.user_names.get(str(did))
+        if override is None:
+            return computed_name
+        if isinstance(override, dict):
+            if sub_item and sub_item in override:
+                result = override[sub_item]
+                return result if result else computed_name
+            return computed_name
+        # String override: replaces full final name
+        return str(override) if override else computed_name
 
     def get_value_template(self, did: int, default_template: str) -> str:
         """Get value_template: overlay has priority, else English default from datapoints."""
