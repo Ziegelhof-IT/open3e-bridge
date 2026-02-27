@@ -143,6 +143,10 @@ class BaseGenerator:
         """Prüft ob DID ignoriert werden soll"""
         return did in self.datapoints.get("ignored_dids", [])
 
+    def is_write_blacklisted(self, did: int) -> bool:
+        """Check if DID is write-blacklisted (read allowed, write blocked)."""
+        return did in self.datapoints.get("write_blacklisted_dids", [])
+
     def parse_open3e_topic(self, topic: str) -> Optional[Dict[str, Any]]:
         """
         Parst Open3E MQTT Topic

@@ -223,8 +223,8 @@ class HomeAssistantGenerator(BaseGenerator):
             "support_url": "https://github.com/open3e/open3e-bridge",
         }
 
-        # Schreibbare Entities
-        if dp_config.get('writable') or template.get('writable'):
+        # Schreibbare Entities (skip if write-blacklisted)
+        if (dp_config.get('writable') or template.get('writable')) and not self.is_write_blacklisted(did):
             config["command_topic"] = "open3e/cmnd"
 
             # Min/Max/Step für Number-Entities

@@ -224,6 +224,12 @@ datapoints:
         {{ value }}
       {% endif %}
 
+  # LegionellaProtectionActivationTime — read-only, write-blacklisted (SAFE-03)
+  875:  # LegionellaProtectionActivationTime
+    type: "generic_sensor"
+    name_key: "legionella_time"
+    icon: "mdi:shield-bug"
+
   # DomesticHotWaterOneTimeCharge — stateless Button
   1710:  # DomesticHotWaterOneTimeCharge
     type: "button_action"
@@ -446,6 +452,10 @@ device_patterns:
 default_device:
   name: "Open3E System"
   model: "E3 Controller"
+
+# Write-blacklisted DIDs (read allowed, write blocked in discovery)
+write_blacklisted_dids:
+  - 875  # LegionellaProtectionActivationTime — safety-critical, read-only
 
 # Fehlerhafte DIDs (werden ignoriert)
 ignored_dids:
