@@ -9,6 +9,14 @@ from .base import BaseGenerator
 
 logger = logging.getLogger("open3e_bridge.generators.ha")
 
+# Keys merged from type templates and dp_config overrides into entity config
+_ENTITY_KEYS = (
+    'device_class', 'unit_of_measurement', 'icon', 'state_class',
+    'mode', 'payload_on', 'payload_off', 'value_template',
+    'command_template', 'options',
+)
+
+
 class HomeAssistantGenerator(BaseGenerator):
     def __init__(self, config_dir: str = "config", language: str = "de", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True):
         super().__init__(config_dir=config_dir, language=language)
@@ -192,12 +200,12 @@ class HomeAssistantGenerator(BaseGenerator):
         }
 
         # Template-Eigenschaften übernehmen
-        for key in ['device_class', 'unit_of_measurement', 'icon', 'state_class', 'mode', 'payload_on', 'payload_off', 'value_template', 'command_template', 'options']:
+        for key in _ENTITY_KEYS:
             if key in template:
                 config[key] = template[key]
 
         # dp_config-Overrides (z.B. payloads, icons, custom value/command templates)
-        for key in ['device_class', 'unit_of_measurement', 'icon', 'state_class', 'mode', 'payload_on', 'payload_off', 'value_template', 'command_template', 'options']:
+        for key in _ENTITY_KEYS:
             if key in dp_config:
                 config[key] = dp_config[key]
 

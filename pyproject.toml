@@ -22,8 +22,15 @@ dev = [
     "jinja2",
 ]
 
+[tool.setuptools]
+# Include bridge.py as top-level module (alongside generators/ package)
+py-modules = ["bridge"]
+
 [tool.setuptools.packages.find]
 include = ["generators*"]
+
+[project.scripts]
+open3e-bridge = "bridge:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

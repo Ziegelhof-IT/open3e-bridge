@@ -137,12 +137,16 @@ datapoints:
     min: 0
     max: 8000
     step: 100
-    # HA führt diese Jinja aus und sendet JSON an open3e/cmnd
+    # SAFE-01: Werte 1-3999W sind GEFAEHRLICH (Viessmann FW-Bug, Discussion #205)
+    # Kompressor-Ausfall und Ventil-Oszillation. Sichere Werte: 0, >=4000W.
     command_template: >
       {% set intvalue = value | int %}
+      {% if intvalue > 0 and intvalue < 4000 %}
+      {% else %}
       {% set cmddata = '%02x' % (intvalue % 256) + '%02x' % (intvalue // 256) + '0000' %}
       {% set cmd = {'mode': 'write-raw', 'data': [[2626, cmddata]]} %}
       {{ cmd | to_json }}
+      {% endif %}
 
   # Weitere Binary-Sensoren nach Vorlage
   2855:  # HK1 Frostschutz-Konfiguration

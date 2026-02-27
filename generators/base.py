@@ -36,7 +36,7 @@ class BaseGenerator:
             # Key type
             try:
                 int(key)
-            except Exception:
+            except (ValueError, TypeError):
                 errors.append(f"Datapoint key '{key}' is not an integer")
                 continue
 
@@ -186,7 +186,6 @@ class BaseGenerator:
         if sub_item and sub_item.lower() != 'unknown':
             # Sanitize sub_item for use in MQTT topic/entity_id (no slashes/spaces)
             cleaned = re.sub(r"[^a-z0-9_]+", "_", sub_item.lower())
-            cleaned = cleaned.replace("/", "_")
             base_id += f"_{cleaned}"
         return base_id
 

@@ -73,8 +73,8 @@ def test_on_message_bridge_lwt_skipped(mock_bridge):
     mock_client.publish.assert_not_called()
 
 
-def test_on_message_json_decode_error(mock_bridge):
-    """Triggers ValueError path via a topic that parses but DID not in config."""
+def test_on_message_unknown_did_no_publish(mock_bridge):
+    """Unknown DID (not in config) produces no discovery publish."""
     bridge, mock_client = mock_bridge
     msg = FakeMessage("open3e/680_99999_Unknown/Value", "not-json")
     bridge._on_message(mock_client, None, msg)
@@ -184,8 +184,9 @@ def test_bridge_start_generic_error():
         MockClient.return_value = mock_client
         from bridge import Open3EBridge
         b = Open3EBridge(test_mode=True)
-        # Should not raise
-        b.start()
+        with pytest.raises(SystemExit) as exc_info:
+            b.start()
+        assert exc_info.value.code == 1
 
 
 # --- cleanup() ---

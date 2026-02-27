@@ -82,7 +82,8 @@ class Open3EBridge:
         except KeyboardInterrupt:
             self._graceful_shutdown(signum=signal.SIGINT)
         except Exception as e:
-            logger.error("Error: %s", e)
+            logger.error("Fatal error (host=%s, port=%d): %s", self.mqtt_host, self.mqtt_port, e)
+            raise SystemExit(1) from e
 
     def cleanup(self, timeout_s: float = 2.0):
         """Löscht alte Discovery-Konfigurationen (Retain leeren) für open3e-Entities."""
@@ -105,7 +106,6 @@ class Open3EBridge:
         self.client.connect(self.mqtt_host, self.mqtt_port, 60)
         self.client.loop_start()
         time.sleep(timeout_s)
-        self.client.loop_stop()
 
         pattern = re.compile(rf"^{re.escape(self.generator.discovery_prefix)}/(sensor|number|select|binary_sensor|climate)/open3e_[^/]+/config$")
         targets = [t for t in retained if pattern.match(t)]
@@ -113,6 +113,11 @@ class Open3EBridge:
         for t in targets:
             logger.debug("Clearing retain: %s", t)
             self.client.publish(t, payload="", retain=True)
+
+        # Let queued publishes flush while network thread is still running
+        if targets:
+            time.sleep(0.5)
+        self.client.loop_stop()
         self.client.disconnect()
 
     def _on_connect(self, client, userdata, connect_flags, reason_code, properties):
@@ -138,39 +143,44 @@ class Open3EBridge:
         for topic, payload in self.published_configs.items():
             self.client.publish(topic, payload, retain=True)
 
+    def process_message(self, topic: str, payload: str):
+        """Public API: process an Open3E message (topic + decoded payload string).
+
+        Use this for simulation, testing, or feeding messages from non-MQTT sources.
+        """
+        # ROB-01: HA birth message → republish all discovery
+        if topic == "homeassistant/status" and payload == "online":
+            self._republish_all_discovery()
+            return
+
+        # Skip LWT und andere Systemnachrichten
+        if '/LWT' in topic or topic.endswith('/LWT'):
+            return
+
+        logger.debug("Processing: %s = %s", topic, payload)
+
+        # Generiere Discovery Messages
+        discovery_messages = self.generator.generate_discovery_message(
+            topic, payload, self.test_mode
+        )
+
+        # Publiziere Discovery Messages
+        for discovery_topic, discovery_payload in discovery_messages:
+            previous = self.published_configs.get(discovery_topic)
+            if previous == discovery_payload:
+                continue
+            logger.info("Publishing discovery: %s", discovery_topic)
+            if self.test_mode:
+                logger.debug("Payload: %s", discovery_payload)
+            self.client.publish(discovery_topic, discovery_payload, retain=True)
+            self.published_configs[discovery_topic] = discovery_payload
+
     def _on_message(self, client, userdata, msg):
-        """MQTT Message Callback"""
+        """MQTT Message Callback — delegates to process_message()."""
         try:
             topic = msg.topic
             payload = msg.payload.decode('utf-8')
-
-            # ROB-01: HA birth message → republish all discovery
-            if topic == "homeassistant/status" and payload == "online":
-                self._republish_all_discovery()
-                return
-
-            # Skip LWT und andere Systemnachrichten
-            if '/LWT' in topic or topic.endswith('/LWT'):
-                return
-
-            logger.debug("Processing: %s = %s", topic, payload)
-
-            # Generiere Discovery Messages
-            discovery_messages = self.generator.generate_discovery_message(
-                topic, payload, self.test_mode
-            )
-
-            # Publiziere Discovery Messages
-            for discovery_topic, discovery_payload in discovery_messages:
-                previous = self.published_configs.get(discovery_topic)
-                if previous == discovery_payload:
-                    continue
-                logger.info("Publishing discovery: %s", discovery_topic)
-                if self.test_mode:
-                    logger.debug("Payload: %s", discovery_payload)
-                self.client.publish(discovery_topic, discovery_payload, retain=True)
-                self.published_configs[discovery_topic] = discovery_payload
-
+            self.process_message(topic, payload)
         except UnicodeDecodeError:
             logger.warning("Non-UTF-8 payload on topic %s, skipping", msg.topic)
         except json.JSONDecodeError as e:
@@ -266,12 +276,6 @@ def simulate_from_file(bridge: Open3EBridge, filepath: str):
         logger.info("Connecting to MQTT broker %s:%d for simulation...", bridge.mqtt_host, bridge.mqtt_port)
         bridge.client.connect(bridge.mqtt_host, bridge.mqtt_port, 60)
         bridge.client.loop_start()
-        # Fake MQTT Client für Simulation
-        class FakeMessage:
-            def __init__(self, topic, payload):
-                self.topic = topic
-                self.payload = payload.encode('utf-8')
-
         with open(filepath, 'r') as f:
             for line in f:
                 line = line.strip()
@@ -282,8 +286,7 @@ def simulate_from_file(bridge: Open3EBridge, filepath: str):
                 parts = line.split(' ', 1)
                 if len(parts) == 2:
                     topic, payload = parts
-                    msg = FakeMessage(topic, payload)
-                    bridge._on_message(None, None, msg)
+                    bridge.process_message(topic, payload)
                     time.sleep(0.1)  # Kurze Pause zwischen Messages
         # Let any pending publishes flush
         time.sleep(0.5)
