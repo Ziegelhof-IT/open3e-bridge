@@ -1,5 +1,5 @@
 """
-Basis-Generator für MQTT Discovery Messages
+Base generator for MQTT Discovery Messages
 """
 import logging
 import re
@@ -10,18 +10,67 @@ import yaml
 
 logger = logging.getLogger("open3e_bridge.generators")
 
+# English suffix map (canonical, no file needed)
+_EN_SUFFIXES = {
+    "current": "Current", "min": "Minimum", "max": "Maximum",
+    "avg": "Average", "unknown": "Unknown", "error": "Error",
+}
+
+
 class BaseGenerator:
-    def __init__(self, config_dir: str = "config", language: str = "de"):
+    def __init__(self, config_dir: str = "config", language: str = "en"):
         self.config_dir = Path(config_dir)
         self.language = language
 
-        # Lade Konfigurationsdateien
+        # Load config files
         self.datapoints = self._load_yaml(self.config_dir / "datapoints.yaml")
-        self.translations = self._load_yaml(self.config_dir / "translations" / f"{language}.yaml")
         self.type_templates = self._load_yaml(self.config_dir / "templates" / "types.yaml")
 
-        # Device-Informationen Cache
+        # Load translations only for non-English languages
+        if language != "en":
+            self.translations = self._load_yaml(
+                self.config_dir / "translations" / f"{language}.yaml"
+            )
+        else:
+            self.translations = {}
+
+        # Device info cache
         self.device_cache = {}
+
+    # ------------------------------------------------------------------
+    # Translation methods
+    # ------------------------------------------------------------------
+
+    def translate_name(self, english_name: str) -> str:
+        """Translate entity name. EN: passthrough, other: overlay with EN fallback."""
+        if self.language == "en":
+            return english_name
+        return self.translations.get("names", {}).get(english_name, english_name)
+
+    def translate_suffix(self, suffix_key: str) -> str:
+        """Translate sub-item suffix. EN: known map, other: overlay with fallback."""
+        if self.language == "en":
+            return _EN_SUFFIXES.get(suffix_key, suffix_key)
+        return self.translations.get("suffixes", {}).get(
+            suffix_key, _EN_SUFFIXES.get(suffix_key, suffix_key))
+
+    def translate_string(self, key: str, fallback: str = None) -> str:
+        """Translate misc strings (suggested_area). EN: fallback, other: overlay."""
+        if self.language == "en":
+            return fallback or key
+        return self.translations.get("strings", {}).get(key, fallback or key)
+
+    def get_value_template(self, did: int, default_template: str) -> str:
+        """Get value_template: overlay has priority, else English default from datapoints."""
+        vt = self.translations.get("value_templates", {})
+        overlay = vt.get(did) or vt.get(str(did))
+        if overlay:
+            return overlay
+        return default_template
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
 
     def validate(self) -> Dict[str, Any]:
         """Validates datapoints and templates. Returns dict with errors/warnings."""
@@ -39,7 +88,7 @@ class BaseGenerator:
                         errors.append(f"write_blacklisted_dids: '{item}' is not an integer")
 
         # Check type templates present
-        available_types = set(k for k in self.type_templates.keys() if k != 'sub_type_templates')
+        available_types = set(self.type_templates.keys())
 
         dps = self.datapoints.get('datapoints', {}) or {}
         for key, cfg in dps.items():
@@ -62,10 +111,16 @@ class BaseGenerator:
                 if num_key in cfg and not isinstance(cfg[num_key], (int, float)):
                     errors.append(f"DID {key}: '{num_key}' must be number")
 
-            # name_key against translations
-            name_key = cfg.get('name_key')
-            if name_key and name_key not in self.translations:
-                warnings.append(f"DID {key}: name_key '{name_key}' missing in {self.language} translations")
+            # name field (required, non-empty string)
+            name = cfg.get('name')
+            if not name and tp != 'device_info':
+                warnings.append(f"DID {key}: missing 'name' field")
+            elif name and self.language != "en":
+                names_dict = self.translations.get("names", {})
+                if name not in names_dict:
+                    warnings.append(
+                        f"DID {key}: name '{name}' missing in {self.language} translations"
+                    )
 
             # Options type
             if 'options' in cfg and not isinstance(cfg['options'], list):
@@ -129,7 +184,7 @@ class BaseGenerator:
                         _check(key, f"climate {tk}", climate[tk])
 
     def _load_yaml(self, filepath: Path) -> Dict[str, Any]:
-        """Lädt YAML-Datei"""
+        """Load YAML file"""
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f) or {}
@@ -137,20 +192,16 @@ class BaseGenerator:
             logger.warning("Config file not found: %s", filepath)
             return {}
 
-    def translate(self, key: str) -> str:
-        """Übersetzt einen Schlüssel"""
-        return self.translations.get(key, key)
-
     def get_datapoint_config(self, did: int) -> Optional[Dict[str, Any]]:
-        """Holt Konfiguration für einen Datenpunkt"""
+        """Get config for a datapoint"""
         return self.datapoints.get("datapoints", {}).get(did)
 
     def get_type_template(self, type_name: str) -> Dict[str, Any]:
-        """Holt Template für einen Typ"""
+        """Get template for a type"""
         return self.type_templates.get(type_name, {})
 
     def is_ignored_did(self, did: int) -> bool:
-        """Prüft ob DID ignoriert werden soll"""
+        """Check if DID should be ignored"""
         return did in self.datapoints.get("ignored_dids", [])
 
     def is_write_blacklisted(self, did: int) -> bool:
@@ -159,7 +210,7 @@ class BaseGenerator:
 
     def parse_open3e_topic(self, topic: str) -> Optional[Dict[str, Any]]:
         """
-        Parst Open3E MQTT Topic
+        Parse Open3E MQTT Topic
         Format: open3e/680_268_FlowTemperatureSensor/Actual
         """
         try:
@@ -167,12 +218,12 @@ class BaseGenerator:
             if len(parts) < 2 or parts[0] != 'open3e':
                 return None
 
-            # Parse Hauptteil: 680_268_FlowTemperatureSensor
+            # Parse main part: 680_268_FlowTemperatureSensor
             main_part = parts[1]
             if '_' not in main_part:
                 return None
 
-            # Split bei ersten beiden Underscores
+            # Split at first two underscores
             parts_main = main_part.split('_', 2)
             if len(parts_main) < 3:
                 return None
@@ -181,7 +232,7 @@ class BaseGenerator:
             did = int(parts_main[1])
             sensor_name = parts_main[2]
 
-            # Sub-Item (falls vorhanden). Unterstützt auch tiefere Pfade (z.B. "Mode/ID").
+            # Sub-Item (if present). Supports deep paths (e.g. "Mode/ID").
             sub_item = "/".join(parts[2:]) if len(parts) > 2 else None
 
             return {
@@ -195,7 +246,7 @@ class BaseGenerator:
             return None
 
     def generate_entity_id(self, ecu_addr: str, did: int, sub_item: str = None) -> str:
-        """Generiert Entity ID"""
+        """Generate Entity ID"""
         base_id = f"open3e_{ecu_addr}_{did}"
         if sub_item and sub_item.lower() != 'unknown':
             # Sanitize sub_item for use in MQTT topic/entity_id (no slashes/spaces)
@@ -204,38 +255,38 @@ class BaseGenerator:
         return base_id
 
     def generate_unique_id(self, ecu_addr: str, did: int, sub_item: str = None) -> str:
-        """Generiert Unique ID für Home Assistant"""
+        """Generate Unique ID for Home Assistant"""
         return self.generate_entity_id(ecu_addr, did, sub_item)
 
     def update_device_info(self, ecu_addr: str, did: int, value: str):
-        """Aktualisiert Device-Informationen basierend auf MQTT-Nachrichten"""
+        """Update device info based on MQTT messages"""
         device_id_dids = self.datapoints.get("device_identification_dids", {})
 
-        # Prüfe ob dieser DID Device-Info enthält
+        # Check if this DID contains device info
         if did in device_id_dids:
             logger.debug("Found device info in DID %d: %s", did, value)
 
-            # Extrahiere Geräte-Info aus dem Wert
+            # Extract device info from value
             device_info = self._extract_device_info(value)
 
-            # ggf. Seriennummer aus bestimmten DIDs übernehmen (z. B. IdentNumber 377)
+            # Extract serial from specific DIDs (e.g. IdentNumber 377)
             try:
                 if int(did) == 377 or device_id_dids.get(did, {}).get('extract_serial'):
                     device_info['serial'] = str(value).strip()
             except Exception:
                 pass
 
-            # Cache für diesen ECU
+            # Cache for this ECU
             if ecu_addr not in self.device_cache:
                 self.device_cache[ecu_addr] = {}
 
             self.device_cache[ecu_addr].update(device_info)
 
     def _extract_device_info(self, value: str) -> Dict[str, str]:
-        """Extrahiert Geräte-Informationen aus einem Wert"""
+        """Extract device info from a value"""
         device_patterns = self.datapoints.get("device_patterns", [])
 
-        # Versuche Pattern zu matchen
+        # Try to match patterns
         for pattern_config in device_patterns:
             pattern = pattern_config.get("pattern", "")
             if re.search(pattern, value, re.IGNORECASE):
@@ -244,7 +295,7 @@ class BaseGenerator:
                     "model": pattern_config.get("model", pattern)
                 }
 
-        # Fallback: Verwende den Wert direkt (bereinigt)
+        # Fallback: use value directly (cleaned)
         clean_value = re.sub(r'[^a-zA-Z0-9\-\s]', '', value).strip()
         return {
             "name": clean_value or "Open3E System",
@@ -252,15 +303,15 @@ class BaseGenerator:
         }
 
     def create_device_info(self, ecu_addr: str, device_name: str = None) -> Dict[str, Any]:
-        """Erstellt Device-Informationen"""
-        # Verwende gecachte Device-Info falls verfügbar
+        """Create device info"""
+        # Use cached device info if available
         cached_info = self.device_cache.get(ecu_addr, {})
 
         if not device_name:
             device_name = cached_info.get("name")
 
         if not device_name:
-            # Fallback aus Konfiguration
+            # Fallback from config
             default_device = self.datapoints.get("default_device", {})
             device_name = default_device.get("name", "Open3E System")
             model = default_device.get("model", "E3 Controller")
@@ -277,17 +328,17 @@ class BaseGenerator:
             "name": device_name,
             "manufacturer": "Viessmann",
             "model": model,
-            "suggested_area": self.translate("suggested_area")
+            "suggested_area": self.translate_string("suggested_area", "Heating")
         }
 
-        # Optional: SW-Version falls vorhanden
+        # Optional: SW version if available
         if cached_info.get('sw_version'):
             info['sw_version'] = cached_info['sw_version']
 
         return info
 
     def merge_config(self, base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Merged Konfigurationen zusammen"""
+        """Merge configs together"""
         result = base_config.copy()
         for key, value in override_config.items():
             if isinstance(value, dict) and key in result and isinstance(result[key], dict):

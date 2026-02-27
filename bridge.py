@@ -203,7 +203,7 @@ def main():
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--mqtt-user", help="MQTT username")
     parser.add_argument("--mqtt-password", help="MQTT password")
-    parser.add_argument("--language", default="de", choices=["de", "en"], help="Language for entity names")
+    parser.add_argument("--language", default="en", choices=["de", "en"], help="Language for entity names")
     parser.add_argument("--test", action="store_true", help="Test mode (publish to test/ topics)")
     parser.add_argument("--discovery-prefix", default=None, help="MQTT discovery prefix (default: homeassistant; with --test => test/homeassistant)")
     parser.add_argument("--no-test-prefix", action="store_true", help="Do not prepend 'test/' to discovery prefix even in simulation/test mode")

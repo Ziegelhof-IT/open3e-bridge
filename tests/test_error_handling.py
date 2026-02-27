@@ -105,7 +105,7 @@ class TestTypedDiscoveryEdgeCases:
         """Datapoint with type=None returns empty list (L88)."""
         # Inject a DID with no type
         generator_en.datapoints.setdefault("datapoints", {})[77771] = {
-            "name_key": "test_sensor",
+            "name": "Test Sensor",
         }
         result = generator_en.generate_discovery_message(
             "open3e/680_77771_TestSensor/Actual", "42",
@@ -116,7 +116,7 @@ class TestTypedDiscoveryEdgeCases:
         """Datapoint with unknown type template returns empty list (L92)."""
         generator_en.datapoints.setdefault("datapoints", {})[77772] = {
             "type": "nonexistent_type_xyz",
-            "name_key": "test_sensor",
+            "name": "Test Sensor",
         }
         result = generator_en.generate_discovery_message(
             "open3e/680_77772_TestSensor/Actual", "42",
@@ -134,7 +134,7 @@ class TestDisabledSubItem:
         """Sub with enabled=False produces no discovery (93->114)."""
         generator_en.datapoints.setdefault("datapoints", {})[77773] = {
             "type": "temperature_sensor",
-            "name_key": "test_sensor",
+            "name": "Test Sensor",
             "subs": {
                 "Actual": {"type": "current", "enabled": False},
             },
@@ -155,7 +155,7 @@ class TestClimateConfigBranches:
         """Climate with no optional templates or ranges (all False branches)."""
         generator_en.datapoints.setdefault("datapoints", {})[77774] = {
             "type": "select_mode",
-            "name_key": "test_climate",
+            "name": "Test Climate",
             "subs": {
                 "Mode/ID": {
                     "entity_type": "select",
@@ -163,7 +163,7 @@ class TestClimateConfigBranches:
                 },
             },
             "climate": {
-                "name_key": "test_climate",
+                "name": "Test Climate",
                 "trigger_sub": "Mode/ID",
                 # No mode_state_template (152->154)
                 # No mode_command_template (154->158)
@@ -197,7 +197,7 @@ class TestWritableNoMinMaxStep:
         """Writable entity where min/max/step not in dp_config or template (219->216)."""
         generator_en.datapoints.setdefault("datapoints", {})[77775] = {
             "type": "generic_sensor",
-            "name_key": "test_writable",
+            "name": "Test Writable",
             "writable": True,
             # No min, max, step here
         }

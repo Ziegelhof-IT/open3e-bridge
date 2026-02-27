@@ -100,10 +100,10 @@ class TestDID2335:
         self.tmpl = _load_datapoints()[2335]["value_template"]
 
     @pytest.mark.parametrize("value,expected", [
-        (0, "Heizen"),
-        (1, "Abtauen"),
-        (2, "Warmwasser"),
-        (3, "Kuehlen"),
+        (0, "Heating"),
+        (1, "Defrost"),
+        (2, "DHW"),
+        (3, "Cooling"),
         (99, "99"),
     ])
     def test_value_mapping(self, value, expected):

@@ -21,7 +21,7 @@ _STATELESS_ENTITY_TYPES = frozenset({"button"})
 
 
 class HomeAssistantGenerator(BaseGenerator):
-    def __init__(self, config_dir: str = "config", language: str = "de", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True):
+    def __init__(self, config_dir: str = "config", language: str = "en", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True):
         super().__init__(config_dir=config_dir, language=language)
         self.discovery_prefix = discovery_prefix
         self.add_test_prefix = add_test_prefix
@@ -79,9 +79,8 @@ class HomeAssistantGenerator(BaseGenerator):
         did = parsed['did']
         sub_item = parsed['sub_item']
 
-        # Basis-Name aus Übersetzung
-        name_key = dp_config.get('name_key', f'did_{did}')
-        base_name = self.translate(name_key)
+        # Entity name from English canonical + translation + user override
+        base_name = self.translate_name(dp_config.get('name', f'DID {did}'))
 
         results = []
 
@@ -102,9 +101,10 @@ class HomeAssistantGenerator(BaseGenerator):
         else:
             sub_config = dp_config.get('subs', {}).get(sub_item, {})
             if sub_config.get('enabled', True):  # Default: enabled
-                # Sub-spezifische Konfiguration
-                sub_type = sub_config.get('type', sub_item)
-                sub_name = f"{base_name} {self.translate(sub_type)}"
+                # Sub-specific config: suffix for display name
+                suffix_key = sub_config.get('suffix', sub_item)
+                translated_suffix = self.translate_suffix(suffix_key)
+                sub_name = f"{base_name} {translated_suffix}" if translated_suffix else base_name
 
                 entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
                 unique_id = self.generate_unique_id(ecu_addr, did, sub_item)
@@ -137,7 +137,7 @@ class HomeAssistantGenerator(BaseGenerator):
         unique_id = self.generate_unique_id(ecu_addr, did, 'climate')
         discovery_topic = self._build_discovery_topic('climate', entity_id, test_mode)
 
-        name = climate_cfg.get('name') or self.translate(climate_cfg.get('name_key', 'climate'))
+        name = self.translate_name(climate_cfg.get('name', 'Climate'))
 
         config: Dict[str, Any] = {
             'name': name,
@@ -211,10 +211,14 @@ class HomeAssistantGenerator(BaseGenerator):
             if key in template:
                 config[key] = template[key]
 
-        # dp_config-Overrides (z.B. payloads, icons, custom value/command templates)
+        # dp_config overrides (payloads, icons, custom value/command templates)
         for key in _ENTITY_KEYS:
             if key in dp_config:
                 config[key] = dp_config[key]
+
+        # Value template i18n overlay
+        if 'value_template' in config:
+            config['value_template'] = self.get_value_template(did, config['value_template'])
 
         # Origin information
         config["origin"] = {

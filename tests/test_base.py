@@ -88,7 +88,7 @@ class TestValidate:
 
     def test_detects_missing_type(self, config_dir):
         gen = BaseGenerator(config_dir=config_dir, language="de")
-        gen.datapoints.setdefault("datapoints", {})[99998] = {"name_key": "test"}
+        gen.datapoints.setdefault("datapoints", {})[99998] = {"name": "Test"}
         result = gen.validate()
         error_msgs = " ".join(result["errors"])
         assert "missing 'type'" in error_msgs
@@ -135,15 +135,33 @@ class TestValidate:
         assert "'min' must be number" in error_msgs
         assert "sub 'Actual'" in error_msgs
 
+    def test_warning_for_missing_name(self, config_dir):
+        gen = BaseGenerator(config_dir=config_dir, language="en")
+        gen.datapoints.setdefault("datapoints", {})[99991] = {
+            "type": "temperature_sensor",
+        }
+        result = gen.validate()
+        warning_msgs = " ".join(result["warnings"])
+        assert "99991" in warning_msgs and "missing 'name'" in warning_msgs
+
+    def test_missing_name_not_warned_for_device_info(self, config_dir):
+        gen = BaseGenerator(config_dir=config_dir, language="en")
+        gen.datapoints.setdefault("datapoints", {})[99990] = {
+            "type": "device_info",
+        }
+        result = gen.validate()
+        did_warnings = [w for w in result["warnings"] if "99990" in w]
+        assert did_warnings == []
+
     def test_warning_for_missing_translation(self, config_dir):
         gen = BaseGenerator(config_dir=config_dir, language="de")
         gen.datapoints.setdefault("datapoints", {})[99994] = {
             "type": "temperature_sensor",
-            "name_key": "totally_unknown_key",
+            "name": "Totally Unknown Name",
         }
         result = gen.validate()
         warning_msgs = " ".join(result["warnings"])
-        assert "totally_unknown_key" in warning_msgs
+        assert "Totally Unknown Name" in warning_msgs
 
     def test_device_info_type_is_accepted(self, config_dir):
         """Type 'device_info' must not trigger 'unknown type' errors."""
@@ -198,24 +216,46 @@ class TestUpdateDeviceInfo:
 # 4. translate
 # ---------------------------------------------------------------------------
 
-class TestTranslate:
-    """Tests for BaseGenerator.translate."""
+class TestTranslation:
+    """Tests for BaseGenerator translation methods."""
 
-    def test_returns_translated_value_de(self, generator_de):
-        assert generator_de.translate("flow_temperature") == "Vorlauftemperatur"
+    def test_translate_name_de(self, generator_de):
+        result = generator_de.translate_name("Flow Temperature")
+        assert result == "Vorlauftemperatur"
 
-    def test_returns_translated_value_en(self, generator_en):
-        # English translation file should have its own value
-        result = generator_en.translate("flow_temperature")
+    def test_translate_name_en_passthrough(self, generator_en):
+        result = generator_en.translate_name("Flow Temperature")
+        assert result == "Flow Temperature"
+
+    def test_translate_name_fallback(self, generator_de):
+        result = generator_de.translate_name("Unknown Name Not In Translations")
+        assert result == "Unknown Name Not In Translations"
+
+    def test_translate_suffix_de(self, generator_de):
+        result = generator_de.translate_suffix("current")
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_returns_key_as_fallback(self, generator_de):
-        missing_key = "this_key_does_not_exist_anywhere"
-        assert generator_de.translate(missing_key) == missing_key
+    def test_translate_suffix_en(self, generator_en):
+        assert generator_en.translate_suffix("current") == "Current"
+        assert generator_en.translate_suffix("min") == "Minimum"
 
-    def test_suggested_area_de(self, generator_de):
-        assert generator_de.translate("suggested_area") == "Heizung"
+    def test_translate_string_de(self, generator_de):
+        assert generator_de.translate_string("suggested_area", "Heating") == "Heizung"
+
+    def test_translate_string_en_passthrough(self, generator_en):
+        assert generator_en.translate_string("suggested_area", "Heating") == "Heating"
+
+    def test_get_value_template_uses_overlay(self, generator_de):
+        result = generator_de.get_value_template(2335, "{% if value==0 %}Heating{% endif %}")
+        # German overlay should return German template
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_get_value_template_en_uses_default(self, generator_en):
+        default = "{% if value==0 %}Heating{% endif %}"
+        result = generator_en.get_value_template(2335, default)
+        assert result == default
 
 
 # ---------------------------------------------------------------------------

@@ -21,7 +21,7 @@ Generates Home Assistant MQTT Discovery from Open3E MQTT topics. No manual HA YA
 ## Structure
 - `config/datapoints.yaml`: Maps DIDs and sub-items to HA entity types, writeability, and templates.
 - `config/templates/types.yaml`: Reusable type templates (sensor/number/select/binary_sensor).
-- `config/translations/{de,en}.yaml`: Localized names.
+- `config/translations/de.yaml`: German name overlay (English is canonical in `datapoints.yaml`).
 - `generators/`: Message parsing and discovery builders.
 - `bridge.py`: MQTT client loop and publishing with retain.
 
@@ -41,7 +41,7 @@ Generates Home Assistant MQTT Discovery from Open3E MQTT topics. No manual HA YA
 - Map DIDs: add entries in `config/datapoints.yaml` with a suitable `type` from `templates/types.yaml`.
 - Sub-items: for values like `/Actual`, `/Minimum`, `/Mode/ID`, define under `subs:` with `entity_type` if needed.
 - Writable values: set `writable: true` and a `command_template` (Jinja) that emits an Open3E JSON command to `open3e/cmnd`.
-- Naming: add `name_key` and provide translations in `config/translations/de.yaml` and `en.yaml`.
+- Naming: set `name` (English) in `datapoints.yaml` and add a German translation in `config/translations/de.yaml`.
 - Validate: `python bridge.py --validate-config` to catch mistakes early.
 - Simulate: `python bridge.py --test --simulate test_device.txt` and inspect generated discovery topics.
 - Cleanup and retest: `python bridge.py --cleanup` to clear old retained configs before re-simulating.

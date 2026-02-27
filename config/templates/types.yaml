@@ -148,27 +148,3 @@ binary_onoff:
   device_class: "power"
   icon: "mdi:power"
 
-# Sub-Typ-Templates für generische Verwendung
-sub_type_templates:
-  current:
-    entity_type: "sensor"
-    state_class: "measurement"
-    suffix: " Aktuell"
-  min:
-    entity_type: "sensor"
-    state_class: "measurement"
-    suffix: " Minimum"
-  max:
-    entity_type: "sensor"
-    state_class: "measurement"
-    suffix: " Maximum"
-  avg:
-    entity_type: "sensor"
-    state_class: "measurement"
-    suffix: " Durchschnitt"
-  unknown:
-    enabled: false
-  error:
-    entity_type: "sensor"
-    icon: "mdi:alert-circle"
-    suffix: " Fehler"

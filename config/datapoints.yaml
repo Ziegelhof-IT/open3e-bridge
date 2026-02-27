@@ -1,142 +1,141 @@
-# Open3E Datenpunkt-Definitionen - TEST VERSION
-# Community-maintained - kann direkt editiert werden
+# Open3E Datapoint Definitions - TEST VERSION
+# Community-maintained - edit directly
 
 datapoints:
   268:  # FlowTemperatureSensor - Multi-Value Sensor
     type: "temperature_sensor"
-    name_key: "flow_temperature"
+    name: "Flow Temperature"
     subs:
-      Actual: { type: "current" }
-      Minimum: { type: "min" }
-      Maximum: { type: "max" }
-      Average: { type: "avg" }
-      Unknown: { type: "unknown", enabled: false }
+      Actual: { suffix: "current" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
+      Unknown: { suffix: "unknown", enabled: false }
 
   269:  # ReturnTemperatureSensor
     type: "temperature_sensor"
-    name_key: "return_temperature"
+    name: "Return Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   274:  # OutsideTemperatureSensor
     type: "temperature_sensor"
-    name_key: "outside_temperature"
+    name: "Outside Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   318:  # WaterPressureSensor
     type: "pressure_sensor"
-    name_key: "water_pressure"
+    name: "Water Pressure"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   271:  # DomesticHotWaterSensor
     type: "temperature_sensor"
-    name_key: "dhw_temperature"
+    name: "Hot Water"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "" }
 
   # Mixer circuit flow temperatures (Actual only for dashboard)
   284:  # MixerOneCircuitFlowTemperatureSensor
     type: "temperature_sensor"
-    name_key: "mixer1_flow_temperature"
+    name: "Circuit 1 Flow Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   286:  # MixerTwoCircuitFlowTemperatureSensor
     type: "temperature_sensor"
-    name_key: "mixer2_flow_temperature"
+    name: "Circuit 2 Flow Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   # Heating buffer temperatures (if present)
   277:  # BufferBottomTemperatureSensor
     type: "temperature_sensor"
-    name_key: "buffer_bottom_temperature"
+    name: "Buffer Temperature Bottom"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
   279:  # BufferMidTemperatureSensor
     type: "temperature_sensor"
-    name_key: "buffer_mid_temperature"
+    name: "Buffer Temperature Middle"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
   281:  # BufferTopTemperatureSensor
     type: "temperature_sensor"
-    name_key: "buffer_top_temperature"
+    name: "Buffer Temperature Top"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   # Power and thermal capacity (for dashboards and COP calcs)
   2496:  # CurrentThermalCapacitySystem (W)
     type: "power_sensor"
-    name_key: "thermal_power_system"
+    name: "Thermal Power (System)"
 
   1603:  # PointOfCommonCouplingPower
     type: "power_sensor"
-    name_key: "grid_active_power"
+    name: "Grid Active Power"
     subs:
-      ActivePower: { type: "current" }
+      ActivePower: { suffix: "current" }
 
   # Electrical energy totals (counters)
   535:  # ObjectElectricalEnergyStatistical
     type: "energy_sensor"
-    name_key: "electrical_energy_stats"
+    name: "Electrical Energy Statistics"
     subs:
       GridSuppliedEnergy: { }
       ProducedEnergy: { }
       GridFeedInEnergy: { }
 
-  377:  # IdentNumber - für Device-Erkennung
+  377:  # IdentNumber - for device identification
     type: "device_info"
-    name_key: "device_ident"
+    name: "Device Identification"
     extract_serial: true
 
   396:  # DomesticHotWaterTemperatureSetpoint - Writable Setpoint
     type: "temperature_setpoint"
-    name_key: "dhw_setpoint"
+    name: "DHW Setpoint"
     min: 10
     max: 65
     step: 0.5
     writable: true
     write_mode: "write"
 
-  # Vitocal 250 – einfache Migrationen aus manueller HA-Konfiguration
+  # Vitocal 250 - simple migrations from manual HA config
   2442:  # HeatPumpFrostProtection
     type: "binary_onoff"
-    name_key: "heat_pump_frost_protection"
-    # Viele Geräte senden 0.0/1.0
+    name: "Heat Pump Frost Protection"
     payload_off: "0.0"
     payload_on: "1.0"
 
-  401:  # MixerOneCircuitPump (HK1 Pumpenstatus)
+  401:  # MixerOneCircuitPump (HK1 pump status)
     type: "binary_onoff"
-    name_key: "mixer1_pump"
+    name: "Circuit 1 Pump"
     icon: "mdi:pump"
     payload_off: "0.0"
     payload_on: "1.0"
 
   2488:  # CurrentElectricalPowerConsumptionSystem
     type: "power_sensor"
-    name_key: "power_consumption_system"
+    name: "Power Consumption (System)"
 
-  1775:  # PrimaryCircuitFanOne (%) 
+  1775:  # PrimaryCircuitFanOne (%)
     type: "pump_sensor"
-    name_key: "primary_circuit_fan_one"
+    name: "Primary Circuit Fan 1"
 
   1776:  # PrimaryCircuitFanTwo (%)
     type: "pump_sensor"
-    name_key: "primary_circuit_fan_two"
+    name: "Primary Circuit Fan 2"
 
-  # Beispiel für eine einfache schreibbare Zahl (aus manueller config 2626)
+  # Writable number (DID 2626)
   2626:  # MaximumPowerElectricalHeater (W)
     type: "power_sensor"
-    name_key: "max_power_electric_heater"
+    name: "Max Power Electric Heater"
     writable: true
     min: 0
     max: 8000
     step: 100
-    # SAFE-01: Werte 1-3999W sind GEFAEHRLICH (Viessmann FW-Bug, Discussion #205)
-    # Kompressor-Ausfall und Ventil-Oszillation. Sichere Werte: 0, >=4000W.
+    # SAFE-01: Values 1-3999W are DANGEROUS (Viessmann FW bug, Discussion #205)
+    # Compressor failure and valve oscillation. Safe values: 0, >=4000W.
     command_template: >
       {% set intvalue = value | int %}
       {% if intvalue > 0 and intvalue < 4000 %}
@@ -146,102 +145,102 @@ datapoints:
       {{ cmd | to_json }}
       {% endif %}
 
-  # Weitere Binary-Sensoren nach Vorlage
-  2855:  # HK1 Frostschutz-Konfiguration
+  # Additional binary sensors
+  2855:  # HK1 frost protection config
     type: "binary_onoff"
-    name_key: "mixer1_frost_protection"
+    name: "Circuit 1 Frost Protection"
     payload_off: "0.0"
     payload_on: "1.0"
 
-  2856:  # HK2 Frostschutz-Konfiguration
+  2856:  # HK2 frost protection config
     type: "binary_onoff"
-    name_key: "mixer2_frost_protection"
+    name: "Circuit 2 Frost Protection"
     payload_off: "0.0"
     payload_on: "1.0"
 
-  402:  # MixerTwoCircuitPump (HK2 Pumpenstatus)
+  402:  # MixerTwoCircuitPump (HK2 pump status)
     type: "binary_onoff"
-    name_key: "mixer2_pump"
+    name: "Circuit 2 Pump"
     icon: "mdi:pump"
     payload_off: "0.0"
     payload_on: "1.0"
 
   2351:  # HeatPumpCompressor
     type: "binary_onoff"
-    name_key: "compressor_status"
+    name: "Compressor Status"
     payload_off: "0.0"
     payload_on: "1.0"
 
   2352:  # AdditionalElectricHeater
     type: "binary_onoff"
-    name_key: "additional_heater_status"
+    name: "Additional Heater Status"
     payload_off: "0000"
     payload_on: "0100"
 
-  # Temperatur-Sensoren mit /Actual
+  # Temperature sensors with /Actual
   1770:  # SecondaryOutletTemperatureSensor
     type: "temperature_sensor"
-    name_key: "secondary_outlet_temperature"
+    name: "Secondary Circuit Supply Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   1771:  # EngineRoomTemperatureSensor
     type: "temperature_sensor"
-    name_key: "engine_room_temperature"
+    name: "Boiler Room Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   2333:  # EconomizerLiquidTemperatureSensor
     type: "temperature_sensor"
-    name_key: "economizer_liquid_temperature"
+    name: "Condenser Liquid Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   2334:  # EvaporatorVaporTemperatureSensor
     type: "temperature_sensor"
-    name_key: "evaporator_vapor_temperature"
+    name: "Evaporator Vapor Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
-  # EMS Resulting Control State mit Mapping
+  # EMS Resulting Control State with mapping
   2350:  # EnergyManagmentSystemResultingControlState
     type: "generic_sensor"
-    name_key: "ems_resulting_control_state"
+    name: "Smart Grid Operating State"
     icon: "mdi:home-variant"
     value_template: >
       {% set ostate = int(value) %}
       {% if ostate==1 %}
-        {{ "Abschaltbetrieb" }}
+        {{ "Shutdown" }}
       {% elif ostate==2 %}
-        {{ "Normalbetrieb" }}
+        {{ "Normal operation" }}
       {% elif ostate==3 %}
-        {{ "Bevorzugter Betrieb" }}
+        {{ "Preferred operation" }}
       {% elif ostate==4 %}
-        {{ "Erzwungener Betrieb" }}
+        {{ "Forced operation" }}
       {% else %}
         {{ value }}
       {% endif %}
 
-  # LegionellaProtectionActivationTime — read-only, write-blacklisted (SAFE-03)
+  # LegionellaProtectionActivationTime - read-only, write-blacklisted (SAFE-03)
   875:  # LegionellaProtectionActivationTime
     type: "generic_sensor"
-    name_key: "legionella_time"
+    name: "Legionella Protection Activation Time"
     icon: "mdi:shield-bug"
 
-  # DomesticHotWaterOneTimeCharge — stateless Button
+  # DomesticHotWaterOneTimeCharge - stateless Button
   1710:  # DomesticHotWaterOneTimeCharge
     type: "button_action"
-    name_key: "dhw_one_time_charge"
+    name: "DHW One-Time Charge"
     writable: true
     payload_press: "PRESS"
     command_template: >
       {% set cmd = {'mode': 'write', 'data': [[1710, 1]]} %}
       {{ cmd | to_json }}
 
-  # QuickMode (Schnellmodus) — Switch: on=1, off=0
+  # QuickMode - Switch: on=1, off=0
   1006:  # QuickMode
     type: "switch_toggle"
-    name_key: "quick_mode"
+    name: "Quick Mode"
     writable: true
     payload_on: "1"
     payload_off: "0"
@@ -251,10 +250,10 @@ datapoints:
       {% set cmd = {'mode': 'write', 'data': [[1006, value]]} %}
       {{ cmd | to_json }}
 
-  # Heizkreis 1 Pumpe: Setpoint via 1102
+  # Heating circuit 1 pump: Setpoint via 1102
   1102:  # MixerOneCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"
-    name_key: "mixer1_pump"
+    name: "Circuit 1 Pump"
     subs:
       Setpoint:
         entity_type: "number"
@@ -270,10 +269,10 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data': [[1102, cmddata]]} %}
           {{ cmd | to_json }}
 
-  # Heizkreis 1 Vorlauf Min/Max via 1192
+  # Heating circuit 1 flow min/max via 1192
   1192:  # MixerOneCircuitFlowTemperatureMinimumMaximumLimit
     type: "temperature_setpoint"
-    name_key: "mixer1_flow_temperature"
+    name: "Circuit 1 Flow Temperature"
     subs:
       Minimum:
         entity_type: "number"
@@ -305,10 +304,10 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
           {{ cmd | to_json }}
 
-  # Heizkreis 2 Pumpe: Setpoint via 1103
+  # Heating circuit 2 pump: Setpoint via 1103
   1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"
-    name_key: "mixer2_pump"
+    name: "Circuit 2 Pump"
     subs:
       Setpoint:
         entity_type: "number"
@@ -324,50 +323,50 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
           {{ cmd | to_json }}
 
-  # --- Status-DIDs (DATA-03 + DATA-05) ---
+  # --- Status DIDs (DATA-03 + DATA-05) ---
 
   2335:  # FourWayValve
     type: "generic_sensor"
-    name_key: "four_way_valve"
+    name: "Four-Way Valve"
     icon: "mdi:valve"
     value_template: >
       {% set state = value | int %}
-      {% if state == 0 %}Heizen
-      {% elif state == 1 %}Abtauen
-      {% elif state == 2 %}Warmwasser
-      {% elif state == 3 %}Kuehlen
+      {% if state == 0 %}Heating
+      {% elif state == 1 %}Defrost
+      {% elif state == 2 %}DHW
+      {% elif state == 3 %}Cooling
       {% else %}{{ value }}{% endif %}
 
   2346:  # CompressorSpeed (%)
     type: "pump_sensor"
-    name_key: "compressor_speed"
+    name: "Compressor Speed"
 
   2569:  # CompressorSpeedRPS
     type: "generic_sensor"
-    name_key: "compressor_speed_rps"
+    name: "Compressor Speed (rps)"
     unit_of_measurement: "rps"
     state_class: "measurement"
 
   354:  # PrimaryHeatExchanger
     type: "temperature_sensor"
-    name_key: "primary_hx_temperature"
+    name: "Primary Heat Exchanger Temperature"
     subs:
-      Actual: { type: "current" }
+      Actual: { suffix: "current" }
 
   1690:  # PVStatus
     type: "generic_sensor"
-    name_key: "pv_status"
+    name: "PV Status"
     icon: "mdi:solar-power"
 
   1834:  # PVPowerGeneration
     type: "power_sensor"
-    name_key: "pv_power_generation"
+    name: "PV Power Generation"
     icon: "mdi:solar-power"
 
-  # Heizkreis 1/2 Betriebsmodi: off/auto als Select
+  # Heating circuit 1/2 operation modes: off/auto as Select
   1415:  # MixerOneCircuitOperationState
     type: "select_mode"
-    name_key: "mixer1_operation_mode"
+    name: "Circuit 1 Operation Mode"
     subs:
       Mode/ID:
         entity_type: "select"
@@ -378,7 +377,7 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data':[[1415, values[value]]]} %}
           {{ cmd | to_json }}
     climate:
-      name_key: "mixer1_climate"
+      name: "Heating Circuit 1"
       trigger_sub: "Mode/ID"
       modes: ["off", "auto"]
       mode_state_template: "{{ 'off' if (value_json | int(0)) == 0 else 'auto' }}"
@@ -414,7 +413,7 @@ datapoints:
 
   1416:  # MixerTwoCircuitOperationState
     type: "select_mode"
-    name_key: "mixer2_operation_mode"
+    name: "Circuit 2 Operation Mode"
     subs:
       Mode/ID:
         entity_type: "select"
@@ -425,7 +424,7 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data':[[1416, values[value]]]} %}
           {{ cmd | to_json }}
     climate:
-      name_key: "mixer2_climate"
+      name: "Heating Circuit 2"
       trigger_sub: "Mode/ID"
       modes: ["off", "auto"]
       mode_state_template: "{{ 'off' if (value_json | int(0)) == 0 else 'auto' }}"
@@ -458,25 +457,24 @@ datapoints:
         {% set cmddata = '%02x' % (value_com % 256) + '%02x' % (value_com // 256) + '%02x' % (value_sta % 256) + '%02x' % (value_sta // 256) + '%02x' % (value_red % 256) + '%02x' % (value_red // 256) + '000000' %}
         {% set cmd = {'mode': 'write-raw', 'data':[[426, cmddata]]} %}
         {{ cmd | to_json }}
-      
 
-# Device-Identifikation (Priorität: erster gefundener wird verwendet)
+
+# Device identification (priority: first found is used)
 device_identification_dids:
-  377:  # IdentNumber - oft Seriennummer/Modellinfo
+  377:  # IdentNumber - often serial/model info
     type: "device_info"
-    name_key: "device_ident"
-    extract_model: true  # Versuche Modell aus String zu extrahieren
-  256:  # DeviceProperty 
-    type: "device_info" 
-    name_key: "device_property"
-  # Weitere DIDs können hier ergänzt werden je nach Gerätetyp
+    name: "Device Identification"
+    extract_model: true
+  256:  # DeviceProperty
+    type: "device_info"
+    name: "Device Property"
 
-# Geräte-Mapping basierend auf gefundenen Strings
+# Device mapping based on found strings
 device_patterns:
   - pattern: "250"
     name: "Vitocal 250-A"
     model: "Vitocal 250-A"
-  - pattern: "252" 
+  - pattern: "252"
     name: "Vitocal 252-A"
     model: "Vitocal 252-A"
   - pattern: "VX3"
@@ -486,15 +484,15 @@ device_patterns:
     name: "Viessmann Vitodens"
     model: "Vitodens"
 
-# Fallback wenn keine Device-Info gefunden
+# Fallback if no device info found
 default_device:
   name: "Open3E System"
   model: "E3 Controller"
 
 # Write-blacklisted DIDs (read allowed, write blocked in discovery)
 write_blacklisted_dids:
-  - 875  # LegionellaProtectionActivationTime — safety-critical, read-only
+  - 875  # LegionellaProtectionActivationTime - safety-critical, read-only
 
-# Fehlerhafte DIDs (werden ignoriert)
+# Faulty DIDs (ignored)
 ignored_dids:
   - 540  # Device rejected read access

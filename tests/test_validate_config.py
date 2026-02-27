@@ -35,15 +35,15 @@ class TestValidateDetectsProblems:
             tmp_path,
             datapoints_override={
                 "datapoints": {
-                    268: {"type": "sensor", "name_key": "nonexistent_key"},
+                    268: {"type": "sensor", "name": "Nonexistent Name"},
                 },
             },
-            translations={"some_other_key": "Wert"},
+            translations={"names": {"Some Other Name": "Anderer Name"}},
         )
         gen = BaseGenerator(config_dir=cfg_dir, language="de")
         result = gen.validate()
         assert len(result["warnings"]) > 0
-        assert "nonexistent_key" in result["warnings"][0]
+        assert "Nonexistent Name" in result["warnings"][0]
 
     def test_validate_catches_bad_type(self, tmp_path):
         cfg_dir = self._write_minimal_config(
