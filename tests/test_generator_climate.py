@@ -13,6 +13,12 @@ def _find_payload_by_type(results, entity_type):
     return None, None
 
 
+def test_find_payload_by_type_no_match():
+    """Cover the None-return branch of _find_payload_by_type."""
+    result = _find_payload_by_type([("homeassistant/sensor/x/config", '{}')], "nonexistent")
+    assert result == (None, None)
+
+
 def test_climate_discovery_hk1():
     gen = HomeAssistantGenerator(config_dir=CONFIG_DIR, language="en", discovery_prefix="homeassistant")
     topic = "open3e/680_1415_MixerOneCircuitOperationState/Mode/ID"

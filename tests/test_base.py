@@ -326,9 +326,9 @@ class TestJinjaValidation:
             jinja_errors = [e for e in errors if "88884" in e]
             assert jinja_errors == []
         finally:
-            if real_jinja2 is not None:
+            if real_jinja2 is not None:  # pragma: no branch
                 sys.modules["jinja2"] = real_jinja2
-            else:
+            else:  # pragma: no cover
                 del sys.modules["jinja2"]
 
     def test_jinja_syntax_error_reported(self, config_dir):
