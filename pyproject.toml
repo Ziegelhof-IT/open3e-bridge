@@ -21,6 +21,9 @@ dev = [
     "ruff",
     "jinja2",
 ]
+e2e = [
+    "docker>=7.0",
+]
 
 [tool.setuptools]
 # Include bridge.py as top-level module (alongside generators/ package)
@@ -37,6 +40,7 @@ open3e-bridge = "bridge:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["e2e: End-to-end tests (require Docker)"]
 
 [tool.ruff]
 line-length = 120
