@@ -27,7 +27,10 @@ dev = [
 py-modules = ["bridge"]
 
 [tool.setuptools.packages.find]
-include = ["generators*"]
+include = ["generators*", "config*"]
+
+[tool.setuptools.package-data]
+config = ["**/*.yaml"]
 
 [project.scripts]
 open3e-bridge = "bridge:main"
