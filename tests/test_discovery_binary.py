@@ -16,8 +16,8 @@ class TestBinaryFrostProtection:
     def test_payload_on_off(self, generator_en):
         _, payload = generator_en.generate_discovery_message(self.TOPIC, "1.0", test_mode=False)[0]
         cfg = json.loads(payload)
-        assert cfg["payload_on"] == "1.0"
-        assert cfg["payload_off"] == "0.0"
+        assert cfg["payload_on"] == "1"
+        assert cfg["payload_off"] == "0"
 
     def test_has_object_id(self, generator_en):
         _, payload = generator_en.generate_discovery_message(self.TOPIC, "1.0", test_mode=False)[0]
@@ -75,8 +75,8 @@ class TestBinaryCompressor:
 
     def test_payload_on_off(self, generator_en):
         cfg = json.loads(generator_en.generate_discovery_message(self.TOPIC, "0.0")[0][1])
-        assert cfg["payload_on"] == "1.0"
-        assert cfg["payload_off"] == "0.0"
+        assert cfg["payload_on"] == "1"
+        assert cfg["payload_off"] == "0"
 
     def test_has_object_id(self, generator_en):
         cfg = json.loads(generator_en.generate_discovery_message(self.TOPIC, "0.0")[0][1])

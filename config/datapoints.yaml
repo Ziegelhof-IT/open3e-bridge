@@ -142,16 +142,16 @@ datapoints:
     type: "binary_onoff"
     name: "Heat Pump Frost Protection"
     device: "heater"
-    payload_off: "0.0"
-    payload_on: "1.0"
+    payload_off: "0"
+    payload_on: "1"
 
   401:  # MixerOneCircuitPump (HK1 pump status)
     type: "binary_onoff"
     name: "Circuit 1 Pump"
     device: "mixer"
     icon: "mdi:pump"
-    payload_off: "0.0"
-    payload_on: "1.0"
+    payload_off: "0"
+    payload_on: "1"
     trigger_sub: "PowerState"
 
   2488:  # CurrentElectricalPowerConsumptionSystem
@@ -194,16 +194,16 @@ datapoints:
     type: "binary_onoff"
     name: "Circuit 1 Frost Protection"
     device: "mixer"
-    payload_off: "0.0"
-    payload_on: "1.0"
+    payload_off: "0"
+    payload_on: "1"
     trigger_sub: "State"
 
   2856:  # HK2 frost protection config
     type: "binary_onoff"
     name: "Circuit 2 Frost Protection"
     device: "mixer"
-    payload_off: "0.0"
-    payload_on: "1.0"
+    payload_off: "0"
+    payload_on: "1"
     trigger_sub: "State"
 
   402:  # MixerTwoCircuitPump (HK2 pump status)
@@ -211,24 +211,24 @@ datapoints:
     name: "Circuit 2 Pump"
     device: "mixer"
     icon: "mdi:pump"
-    payload_off: "0.0"
-    payload_on: "1.0"
+    payload_off: "0"
+    payload_on: "1"
     trigger_sub: "PowerState"
 
   2351:  # HeatPumpCompressor
     type: "binary_onoff"
     name: "Compressor Status"
     device: "outdoor"
-    payload_off: "0.0"
-    payload_on: "1.0"
+    payload_off: "0"
+    payload_on: "1"
     trigger_sub: "PowerState"
 
   2352:  # AdditionalElectricHeater
     type: "binary_onoff"
     name: "Additional Heater Status"
     device: "heater"
-    payload_off: "0000"
-    payload_on: "0100"
+    payload_off: "0"
+    payload_on: "1"
     trigger_sub: "PowerState"
 
   2369:  # HeatPumpCompressorStatistical
