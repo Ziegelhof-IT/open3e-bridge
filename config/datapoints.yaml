@@ -51,6 +51,23 @@ datapoints:
     subs:
       Actual: { suffix: "current" }
 
+  381:  # CentralHeatingPump
+    type: "pump_sensor"
+    name: "Internal Pump"
+    device: "indoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  1043:  # AllengraSensor (Volume Flow)
+    type: "generic_sensor"
+    name: "Volume Flow"
+    device: "indoor"
+    icon: "mdi:water-pump"
+    unit_of_measurement: "l/h"
+    state_class: "measurement"
+    subs:
+      Actual: { suffix: "current" }
+
   271:  # DomesticHotWaterSensor
     type: "temperature_sensor"
     name: "Hot Water"
@@ -207,6 +224,32 @@ datapoints:
     device: "heater"
     payload_off: "0000"
     payload_on: "0100"
+
+  2369:  # HeatPumpCompressorStatistical
+    type: "generic_sensor"
+    name: "Compressor Statistics"
+    device: "outdoor"
+    subs:
+      hours:
+        unit_of_measurement: "h"
+        icon: "mdi:clock-outline"
+        state_class: "total_increasing"
+      starts:
+        icon: "mdi:counter"
+        state_class: "total_increasing"
+
+  2370:  # AdditionalElectricHeaterStatistical
+    type: "generic_sensor"
+    name: "Additional Heater Statistics"
+    device: "heater"
+    subs:
+      hours:
+        unit_of_measurement: "h"
+        icon: "mdi:clock-outline"
+        state_class: "total_increasing"
+      starts:
+        icon: "mdi:counter"
+        state_class: "total_increasing"
 
   # Temperature sensors with /Actual
   1770:  # SecondaryOutletTemperatureSensor
