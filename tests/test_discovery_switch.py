@@ -44,7 +44,7 @@ class TestSwitchDiscovery:
 
     def test_entity_id(self, generator_en):
         _, p = _discover(generator_en, self.TOPIC)
-        assert p["default_entity_id"] == "open3e_680_1006"
+        assert p["object_id"] == "open3e_680_1006"
 
     def test_origin(self, generator_en):
         _, p = _discover(generator_en, self.TOPIC)

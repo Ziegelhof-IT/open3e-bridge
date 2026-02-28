@@ -146,6 +146,34 @@ class TestDisabledSubItem:
 
 
 # ---------------------------------------------------------------------------
+# 8b. Unconfigured sub-item is silently ignored
+# ---------------------------------------------------------------------------
+
+class TestUnconfiguredSubItem:
+
+    def test_unconfigured_sub_returns_empty(self, generator_en):
+        """Sub-item not listed in subs dict produces no discovery."""
+        result = generator_en.generate_discovery_message(
+            "open3e/680_268_FlowTemperatureSensor/Unknown", "0",
+        )
+        assert result == []
+
+    def test_unconfigured_sub_minimum_returns_empty(self, generator_en):
+        """Sub-items like Minimum/Maximum that are not in subs config are skipped."""
+        result = generator_en.generate_discovery_message(
+            "open3e/680_271_DomesticHotWaterSensor/Minimum", "10.0",
+        )
+        assert result == []
+
+    def test_configured_sub_still_works(self, generator_en):
+        """Configured sub-item (Actual) still produces discovery."""
+        result = generator_en.generate_discovery_message(
+            "open3e/680_268_FlowTemperatureSensor/Actual", "22.5",
+        )
+        assert len(result) == 1
+
+
+# ---------------------------------------------------------------------------
 # 9. Climate config branch coverage (152-166)
 # ---------------------------------------------------------------------------
 

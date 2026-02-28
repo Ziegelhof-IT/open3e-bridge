@@ -23,16 +23,12 @@ devices:
     model: "PV/Grid"
 
 datapoints:
-  268:  # FlowTemperatureSensor - Multi-Value Sensor
+  268:  # FlowTemperatureSensor
     type: "temperature_sensor"
     name: "Flow Temperature"
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
-      Minimum: { suffix: "min" }
-      Maximum: { suffix: "max" }
-      Average: { suffix: "avg" }
-      Unknown: { suffix: "unknown", enabled: false }
 
   269:  # ReturnTemperatureSensor
     type: "temperature_sensor"

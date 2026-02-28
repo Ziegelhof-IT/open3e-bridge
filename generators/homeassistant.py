@@ -100,7 +100,11 @@ class HomeAssistantGenerator(BaseGenerator):
 
         # Sensor mit Sub-Items
         else:
-            sub_config = dp_config.get('subs', {}).get(sub_item, {})
+            subs_dict = dp_config.get('subs', {})
+            if sub_item not in subs_dict:
+                # Sub-Item not configured → skip silently
+                return results
+            sub_config = subs_dict[sub_item]
             if sub_config.get('enabled', True):  # Default: enabled
                 # Sub-specific config: suffix for display name
                 suffix_key = sub_config.get('suffix', sub_item)
@@ -145,7 +149,7 @@ class HomeAssistantGenerator(BaseGenerator):
         config: Dict[str, Any] = {
             'name': name,
             'unique_id': unique_id,
-            'default_entity_id': entity_id,
+            'object_id': entity_id,
             'device': self.create_device_info_for_did(ecu_addr, did),
             'availability_topic': 'open3e/LWT',
             'payload_available': 'online',
@@ -197,7 +201,7 @@ class HomeAssistantGenerator(BaseGenerator):
         config = {
             "name": name,
             "unique_id": unique_id,
-            "default_entity_id": entity_id,
+            "object_id": entity_id,
             "device": self.create_device_info_for_did(ecu_addr, did),
             # Basic availability (expects open3e to publish LWT)
             "availability_topic": "open3e/LWT",
@@ -241,10 +245,10 @@ class HomeAssistantGenerator(BaseGenerator):
                 elif attr in template:
                     config[attr] = template[attr]
 
-            # Command Template (vereinfacht für Test)
+            # Command Template (auto-generated for number entities without explicit template)
             if template.get('entity_type') == 'number' and 'command_template' not in config:
                 write_mode = dp_config.get('write_mode', 'write')
-                config["command_template"] = f'{{"mode": "{write_mode}", "data": [[{did}, "{{{{ value }}}}"]]}}'
+                config["command_template"] = f'{{"mode": "{write_mode}", "data": [[{did}, {{{{ value | float }}}}]]}}'
 
         return config
 

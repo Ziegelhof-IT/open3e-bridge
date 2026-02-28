@@ -17,7 +17,7 @@ def _assert_common_fields(payload, *, name, unique_id, entity_id, state_topic):
     """Assert fields shared by every sensor discovery payload."""
     assert payload["name"] == name
     assert payload["unique_id"] == unique_id
-    assert payload["default_entity_id"] == entity_id
+    assert payload["object_id"] == entity_id
     assert payload["state_topic"] == state_topic
 
     # Device block

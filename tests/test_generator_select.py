@@ -22,7 +22,7 @@ def test_select_discovery_for_operation_mode():
     data = json.loads(payload)
     assert data["name"].lower().startswith("circuit 1 operation mode")
     assert data["unique_id"] == "open3e_680_1415_mode_id"
-    assert data["default_entity_id"] == "open3e_680_1415_mode_id"
+    assert data["object_id"] == "open3e_680_1415_mode_id"
     assert data["state_topic"] == topic
     assert data["options"] == ["off", "auto"]
     # value/command templates should be present per datapoints.yaml

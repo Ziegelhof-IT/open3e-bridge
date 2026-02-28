@@ -10,7 +10,7 @@ from generators.homeassistant import HomeAssistantGenerator
 CONFIG_DIR = str(Path(__file__).resolve().parents[1] / "config")
 USER_DIR = Path(CONFIG_DIR) / "user"
 
-# A DID known to have subs (268 = FlowTemperatureSensor with Actual/Minimum/Maximum)
+# A DID known to have subs (268 = FlowTemperatureSensor with Actual)
 SUB_DID = 268
 SUB_TOPIC = "open3e/680_268_FlowTemperatureSensor/Actual"
 SUB_VALUE = "47.5"

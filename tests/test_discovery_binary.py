@@ -19,10 +19,10 @@ class TestBinaryFrostProtection:
         assert cfg["payload_on"] == "1.0"
         assert cfg["payload_off"] == "0.0"
 
-    def test_has_default_entity_id(self, generator_en):
+    def test_has_object_id(self, generator_en):
         _, payload = generator_en.generate_discovery_message(self.TOPIC, "1.0", test_mode=False)[0]
         cfg = json.loads(payload)
-        assert "default_entity_id" in cfg
+        assert "object_id" in cfg
 
     def test_has_origin(self, generator_en):
         _, payload = generator_en.generate_discovery_message(self.TOPIC, "1.0", test_mode=False)[0]
@@ -51,9 +51,9 @@ class TestBinaryMixer1Pump:
         cfg = json.loads(payload)
         assert cfg["icon"] == "mdi:pump"
 
-    def test_has_default_entity_id(self, generator_en):
+    def test_has_object_id(self, generator_en):
         _, payload = generator_en.generate_discovery_message(self.TOPIC, "1.0")[0]
-        assert "default_entity_id" in json.loads(payload)
+        assert "object_id" in json.loads(payload)
 
     def test_has_origin(self, generator_en):
         cfg = json.loads(generator_en.generate_discovery_message(self.TOPIC, "1.0")[0][1])
@@ -78,9 +78,9 @@ class TestBinaryCompressor:
         assert cfg["payload_on"] == "1.0"
         assert cfg["payload_off"] == "0.0"
 
-    def test_has_default_entity_id(self, generator_en):
+    def test_has_object_id(self, generator_en):
         cfg = json.loads(generator_en.generate_discovery_message(self.TOPIC, "0.0")[0][1])
-        assert "default_entity_id" in cfg
+        assert "object_id" in cfg
 
     def test_has_origin(self, generator_en):
         cfg = json.loads(generator_en.generate_discovery_message(self.TOPIC, "0.0")[0][1])

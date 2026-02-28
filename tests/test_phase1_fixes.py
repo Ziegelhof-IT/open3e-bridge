@@ -18,16 +18,16 @@ class TestPahoV2:
 
 
 # ---------------------------------------------------------------------------
-# 2. default_entity_id: discovery config uses default_entity_id, not object_id
+# 2. object_id: discovery config uses object_id, not default_entity_id
 # ---------------------------------------------------------------------------
 class TestDefaultEntityId:
-    def test_sensor_config_has_default_entity_id(self, generator_de):
+    def test_sensor_config_has_object_id(self, generator_de):
         topic = "open3e/680_274_OutsideTemperatureSensor/Actual"
         results = generator_de.generate_discovery_message(topic, "12.5", test_mode=False)
         assert results, "Expected at least one discovery message"
         config = json.loads(results[0][1])
-        assert "default_entity_id" in config
-        assert "object_id" not in config
+        assert "object_id" in config
+        assert "default_entity_id" not in config
 
 
 # ---------------------------------------------------------------------------
