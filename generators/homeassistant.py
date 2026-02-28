@@ -87,6 +87,10 @@ class HomeAssistantGenerator(BaseGenerator):
 
         # Einfacher Sensor (ohne Sub-Items)
         if not sub_item or not dp_config.get('subs'):
+            # trigger_sub: only publish discovery for the specified sub-item
+            trigger_sub = dp_config.get('trigger_sub')
+            if trigger_sub and sub_item and sub_item != trigger_sub:
+                return results
             entity_type = type_template.get('entity_type', 'sensor')
             entity_id = self.generate_entity_id(ecu_addr, did)
             unique_id = self.generate_unique_id(ecu_addr, did)
