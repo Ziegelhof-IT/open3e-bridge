@@ -34,11 +34,13 @@ def ha_generator_de():
 
 
 def _publish_and_collect(broker, topics_payloads, subscribe_filter, timeout=5):
-    """Publish messages and collect discovery responses."""
-    received = []
+    """Publish messages and collect what comes back for the published topics."""
+    expected_topics = {t for t, _ in topics_payloads}
+    received = {}
 
     def on_message(_client, _userdata, msg):
-        received.append((msg.topic, json.loads(msg.payload.decode())))
+        if msg.topic in expected_topics:
+            received[msg.topic] = json.loads(msg.payload.decode())
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_message = on_message
@@ -54,7 +56,7 @@ def _publish_and_collect(broker, topics_payloads, subscribe_filter, timeout=5):
     time.sleep(timeout)
     client.loop_stop()
     client.disconnect()
-    return received
+    return [(t, p) for t, p in received.items()]
 
 
 class TestDHWDiscoveryE2E:
@@ -118,3 +120,52 @@ class TestDHWDiscoveryE2E:
         )
         assert len(collected) >= 1
         assert collected[0][1]["name"] == "DHW Setpoint"
+
+
+class TestBufferStorageE2E:
+    """Verify buffer storage entity name matches ViCare."""
+
+    def test_did_3016_vicare_name_de(self, mqtt_broker, ha_generator_de):
+        """DID 3016 in German must be 'Pufferspeicher' (ViCare exact)."""
+        msgs = ha_generator_de.generate_discovery_message(
+            "open3e/680_3016_HeatingBufferTemperatureSensor/Actual",
+            "25.4",
+        )
+        assert len(msgs) >= 1
+        topic, payload_str = msgs[0]
+        config = json.loads(payload_str)
+        assert config["name"] == "Pufferspeicher"
+
+        # MQTT round-trip
+        collected = _publish_and_collect(
+            mqtt_broker,
+            [(topic, payload_str)],
+            "homeassistant/#",
+            timeout=2,
+        )
+        assert len(collected) >= 1
+        assert collected[0][1]["name"] == "Pufferspeicher"
+
+    def test_did_3016_name_en(self, mqtt_broker, ha_generator):
+        """DID 3016 in English: 'Heating Buffer Temperature'."""
+        msgs = ha_generator.generate_discovery_message(
+            "open3e/680_3016_HeatingBufferTemperatureSensor/Actual",
+            "25.4",
+        )
+        assert len(msgs) >= 1
+        _, payload_str = msgs[0]
+        config = json.loads(payload_str)
+        assert config["name"] == "Heating Buffer Temperature"
+
+    def test_did_3016_entity_properties(self, mqtt_broker, ha_generator_de):
+        """DID 3016 must be temperature sensor with correct unit."""
+        msgs = ha_generator_de.generate_discovery_message(
+            "open3e/680_3016_HeatingBufferTemperatureSensor/Actual",
+            "25.4",
+        )
+        _, payload_str = msgs[0]
+        config = json.loads(payload_str)
+        assert config["device_class"] == "temperature"
+        assert config["unit_of_measurement"] == "°C"
+        assert config["state_class"] == "measurement"
+        assert "homeassistant/sensor/" in msgs[0][0]
