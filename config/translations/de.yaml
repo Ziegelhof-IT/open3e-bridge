@@ -60,8 +60,8 @@ devices:
   "Vitocal 250-A Outdoor Unit": "Vitocal 250-A Ausseneinheit"
   "Vitocal 252-A Indoor Unit": "Vitocal 252-A Inneneinheit"
   "Vitocell 100-E Hot Water Tank": "Vitocell 100-E Warmwasserspeicher"
-  "Heating Circuit Mixer": "Heizkreismischer"
-  "Auxiliary Heater": "Zusatzheizung"
+  "Vitocal 252-A Heating Circuit Mixer": "Vitocal 252-A Heizkreismischer"
+  "Vitocal 252-A Auxiliary Heater": "Vitocal 252-A Zusatzheizung"
   "Energy Management": "Energiemanagement"
 
 strings:

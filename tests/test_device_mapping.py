@@ -24,12 +24,12 @@ class TestDeviceInfoForDid:
     def test_mixer_device(self, generator_en):
         info = generator_en.create_device_info_for_did("680", 284)
         assert info["identifiers"] == ["open3e_680_mixer"]
-        assert info["name"] == "Heating Circuit Mixer"
+        assert info["name"] == "Vitocal 252-A Heating Circuit Mixer"
 
     def test_heater_device(self, generator_en):
         info = generator_en.create_device_info_for_did("680", 2626)
         assert info["identifiers"] == ["open3e_680_heater"]
-        assert info["name"] == "Auxiliary Heater"
+        assert info["name"] == "Vitocal 252-A Auxiliary Heater"
 
     def test_energy_device(self, generator_en):
         info = generator_en.create_device_info_for_did("680", 1603)
@@ -69,11 +69,11 @@ class TestDeviceNameTranslation:
 
     def test_mixer_name_de(self, generator_de):
         info = generator_de.create_device_info_for_did("680", 284)
-        assert info["name"] == "Heizkreismischer"
+        assert info["name"] == "Vitocal 252-A Heizkreismischer"
 
     def test_heater_name_de(self, generator_de):
         info = generator_de.create_device_info_for_did("680", 2626)
-        assert info["name"] == "Zusatzheizung"
+        assert info["name"] == "Vitocal 252-A Zusatzheizung"
 
     def test_energy_name_de(self, generator_de):
         info = generator_de.create_device_info_for_did("680", 1603)
@@ -121,7 +121,7 @@ class TestDiscoveryDeviceMapping:
         assert len(msgs) >= 1
         payload = json.loads(msgs[0][1])
         assert payload["device"]["identifiers"] == ["open3e_680_mixer"]
-        assert payload["device"]["name"] == "Heizkreismischer"
+        assert payload["device"]["name"] == "Vitocal 252-A Heizkreismischer"
 
     def test_different_dids_same_device(self, generator_en):
         """Multiple DIDs on same device share the same identifier."""

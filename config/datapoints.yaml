@@ -13,11 +13,11 @@ devices:
     name: "Vitocell 100-E Hot Water Tank"
     model: "Vitocell 100-E"
   mixer:
-    name: "Heating Circuit Mixer"
-    model: "Mixer Module"
+    name: "Vitocal 252-A Heating Circuit Mixer"
+    model: "Vitocal 252-A"
   heater:
-    name: "Auxiliary Heater"
-    model: "Electric Heater"
+    name: "Vitocal 252-A Auxiliary Heater"
+    model: "Vitocal 252-A"
   energy:
     name: "Energy Management"
     model: "PV/Grid"
