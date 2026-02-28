@@ -141,7 +141,7 @@ datapoints:
   2442:  # HeatPumpFrostProtection
     type: "binary_onoff"
     name: "Heat Pump Frost Protection"
-    device: "heater"
+    device: "outdoor"
     payload_off: "0"
     payload_on: "1"
 
