@@ -8,9 +8,12 @@ aus Open3E Datenpunkten.
 import argparse
 import json
 import logging
+import os
 import re
 import signal
 import time
+from collections import Counter
+from importlib.metadata import version as pkg_version, PackageNotFoundError
 from pathlib import Path
 from typing import Dict, Set
 
@@ -18,14 +21,20 @@ import paho.mqtt.client as mqtt
 
 from generators.homeassistant import HomeAssistantGenerator
 
+try:
+    __version__ = pkg_version("open3e-bridge")
+except PackageNotFoundError:
+    __version__ = "0.1.0-dev"
+
 logger = logging.getLogger("open3e_bridge")
 
 class Open3EBridge:
     def __init__(self, mqtt_host: str = "localhost", mqtt_port: int = 1883,
-                 mqtt_user: str = None, mqtt_password: str = None,
+                 mqtt_user: str | None = None, mqtt_password: str | None = None,
                  language: str = "de", test_mode: bool = True,
                  discovery_prefix: str = "homeassistant",
-                 add_test_prefix: bool = True):
+                 add_test_prefix: bool = True,
+                 config_dir: str | None = None):
 
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
@@ -36,7 +45,7 @@ class Open3EBridge:
         self.add_test_prefix = add_test_prefix
 
         # MQTT Client (paho-mqtt v2 API)
-        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)  # type: ignore[attr-defined]
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
@@ -51,15 +60,25 @@ class Open3EBridge:
         # ROB-02: Reconnect with exponential backoff
         self.client.reconnect_delay_set(min_delay=1, max_delay=120)
 
-        # Generator
-        config_dir = Path(__file__).parent / "config"
-        self.generator = HomeAssistantGenerator(str(config_dir), language, discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix)
+        # Generator — use user-specified config_dir or default bundled config
+        resolved_config_dir = config_dir or str(Path(__file__).parent / "config")
+        self.generator = HomeAssistantGenerator(
+            resolved_config_dir, language,
+            discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix
+        )
 
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
         self.published_configs: Dict[str, str] = {}
 
-        logger.info("Open3E Bridge initialized: MQTT=%s:%d lang=%s test=%s prefix=%s",
-                    mqtt_host, mqtt_port, language, test_mode, self.generator.discovery_prefix)
+        # Diagnostics counters
+        self._start_time = time.monotonic()
+        self._messages_processed = 0
+        self._discovery_published = 0
+        self._entity_types: Counter = Counter()
+
+        logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s",
+                    __version__, mqtt_host, mqtt_port, language, resolved_config_dir,
+                    self.generator.discovery_prefix)
 
     def _graceful_shutdown(self, signum=None, frame=None):
         """Graceful shutdown: publish offline LWT, then disconnect."""
@@ -158,6 +177,7 @@ class Open3EBridge:
             return
 
         logger.debug("Processing: %s = %s", topic, payload)
+        self._messages_processed += 1
 
         # Generiere Discovery Messages
         discovery_messages = self.generator.generate_discovery_message(
@@ -174,6 +194,11 @@ class Open3EBridge:
                 logger.debug("Payload: %s", discovery_payload)
             self.client.publish(discovery_topic, discovery_payload, retain=True)
             self.published_configs[discovery_topic] = discovery_payload
+            self._discovery_published += 1
+            # Track entity type from discovery topic path
+            parts = discovery_topic.split("/")
+            if len(parts) >= 3:
+                self._entity_types[parts[-3]] += 1
 
     def _on_message(self, client, userdata, msg):
         """MQTT Message Callback — delegates to process_message()."""
@@ -190,6 +215,47 @@ class Open3EBridge:
         except Exception as e:
             logger.error("Unexpected error processing %s: %s", msg.topic, e, exc_info=True)
 
+    def get_diagnostics(self) -> Dict[str, object]:
+        """Return bridge diagnostics as a dict (for monitoring / health checks)."""
+        uptime = time.monotonic() - self._start_time
+        return {
+            "version": __version__,
+            "uptime_s": round(uptime, 1),
+            "messages_processed": self._messages_processed,
+            "discovery_published": self._discovery_published,
+            "entities_cached": len(self.published_configs),
+            "entity_types": dict(self._entity_types),
+        }
+
+    def log_entity_summary(self):
+        """Log a summary of discovered entity types."""
+        if not self._entity_types:
+            return
+        parts = [f"{count} {etype}" for etype, count in sorted(self._entity_types.items())]
+        logger.info("Entity summary: %s (total: %d)", ", ".join(parts), sum(self._entity_types.values()))
+
+    def dump_entities(self):
+        """Print all configured entities to stdout (no MQTT connection needed)."""
+        datapoints = self.generator.datapoints.get("datapoints", {}) or {}
+        type_counter: Counter = Counter()
+        print(f"{'DID':<6} {'Type':<25} {'Name':<40} {'Device':<12} {'Subs'}")
+        print("-" * 100)
+        for did_str, dp in sorted(datapoints.items(), key=lambda x: int(x[0])):
+            dp_type = dp.get("type", "?")
+            name = self.generator.translate_name(dp.get("name", "?"))
+            device = dp.get("device", "-")
+            subs = dp.get("subs", {})
+            sub_keys = ", ".join(subs.keys()) if subs else "(all)"
+            # Determine HA entity type from type template
+            template = self.generator.type_templates.get(dp_type, {})
+            ha_type = template.get("component", dp_type)
+            type_counter[ha_type] += 1
+            print(f"{did_str:<6} {dp_type:<25} {name:<40} {device:<12} {sub_keys}")
+        print("-" * 100)
+        total = sum(type_counter.values())
+        summary = ", ".join(f"{c} {t}" for t, c in sorted(type_counter.items()))
+        print(f"Total: {total} entities ({summary})")
+
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
         """MQTT Disconnect Callback (paho v2)"""
         if reason_code == 0:
@@ -199,17 +265,20 @@ class Open3EBridge:
 
 def main():
     parser = argparse.ArgumentParser(description="Open3E Home Assistant Bridge")
+    parser.add_argument("--version", action="version", version=f"open3e-bridge {__version__}")
     parser.add_argument("--mqtt-host", default="localhost", help="MQTT broker host")
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--mqtt-user", help="MQTT username")
-    parser.add_argument("--mqtt-password", help="MQTT password")
+    parser.add_argument("--mqtt-password", help="MQTT password (or set MQTT_PASSWORD env var)")
     parser.add_argument("--language", default="de", choices=["de", "en"], help="Language for entity names")
+    parser.add_argument("--config-dir", help="Path to config directory (default: bundled config)")
     parser.add_argument("--test", action="store_true", help="Test mode (publish to test/ topics)")
     parser.add_argument("--discovery-prefix", default=None, help="MQTT discovery prefix (default: homeassistant; with --test => test/homeassistant)")
     parser.add_argument("--no-test-prefix", action="store_true", help="Do not prepend 'test/' to discovery prefix even in simulation/test mode")
     parser.add_argument("--simulate", help="Simulate with MQTT messages from file")
     parser.add_argument("--cleanup", action="store_true", help="Cleanup retained discovery for open3e entities")
     parser.add_argument("--validate-config", action="store_true", help="Validate datapoints/templates and exit")
+    parser.add_argument("--dump-entities", action="store_true", help="Show configured entities and exit (no MQTT needed)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                         help="Logging level (default: INFO)")
 
@@ -219,6 +288,9 @@ def main():
         level=getattr(logging, args.log_level),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
+
+    # MQTT password: CLI arg takes precedence, then env var
+    mqtt_password = args.mqtt_password or os.environ.get("MQTT_PASSWORD")
 
     # Test Mode nur wenn explizit gewünscht
     test_mode = args.test or bool(args.simulate)
@@ -235,18 +307,17 @@ def main():
         mqtt_host=args.mqtt_host,
         mqtt_port=args.mqtt_port,
         mqtt_user=args.mqtt_user,
-        mqtt_password=args.mqtt_password,
+        mqtt_password=mqtt_password,
         language=args.language,
         test_mode=test_mode,
         discovery_prefix=discovery_prefix,
-        add_test_prefix=not args.no_test_prefix
+        add_test_prefix=not args.no_test_prefix,
+        config_dir=args.config_dir,
     )
 
     # Validate-only mode
     if args.validate_config:
-        # Use the same generator as bridge to validate
-        validator = HomeAssistantGenerator(str(Path(__file__).parent / "config"), args.language, discovery_prefix=discovery_prefix)
-        result = validator.validate()
+        result = bridge.generator.validate()
         if result["errors"]:
             logger.error("Config validation FAILED:")
             for e in result["errors"]:
@@ -255,6 +326,11 @@ def main():
         else:
             logger.info("Config validation OK.")
             raise SystemExit(0)
+
+    # Dump entities mode (no MQTT needed)
+    if args.dump_entities:
+        bridge.dump_entities()
+        raise SystemExit(0)
 
     # Cleanup-only mode
     if args.cleanup:

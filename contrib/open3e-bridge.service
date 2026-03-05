@@ -1,0 +1,27 @@
+[Unit]
+Description=Open3E Home Assistant MQTT Discovery Bridge
+Documentation=https://github.com/open3e/open3e-bridge
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/open3e-bridge/venv/bin/open3e-bridge --mqtt-host localhost --language de
+Restart=on-failure
+RestartSec=5
+# Logging via systemd journal; bridge uses Python logging to stderr
+StandardOutput=journal
+StandardError=journal
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+# Note: If using USB CAN adapters, you may need to disable USB autosuspend:
+#   echo -1 > /sys/module/usbcore/parameters/autosuspend
+# Or add a udev rule to prevent power-saving on the adapter.
+
+[Install]
+WantedBy=multi-user.target

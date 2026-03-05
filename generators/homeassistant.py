@@ -7,6 +7,12 @@ from typing import Any, Dict, List, Tuple
 
 from .base import BaseGenerator
 
+try:
+    from importlib.metadata import version as pkg_version, PackageNotFoundError
+    _SW_VERSION = pkg_version("open3e-bridge")
+except (PackageNotFoundError, Exception):
+    _SW_VERSION = "0.1.0-dev"
+
 logger = logging.getLogger("open3e_bridge.generators.ha")
 
 # Keys merged from type templates and dp_config overrides into entity config
@@ -163,7 +169,7 @@ class HomeAssistantGenerator(BaseGenerator):
         # Origin information
         config['origin'] = {
             'name': 'Open3E Bridge',
-            'sw_version': '0.1.0',
+            'sw_version': _SW_VERSION,
             'support_url': 'https://github.com/open3e/open3e-bridge',
         }
 

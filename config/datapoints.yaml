@@ -1,5 +1,7 @@
-# Open3E Datapoint Definitions - TEST VERSION
+# Open3E Datapoint Definitions
 # Community-maintained - edit directly
+# Schema version for future migration support
+schema_version: 1
 
 # Physical device definitions (DID → device mapping)
 devices:
