@@ -252,3 +252,61 @@ class TestDumpEntities:
         assert result.returncode == 0
         assert "DID" in result.stdout
         assert "Total:" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# 11. Periodic diagnostics publishing
+# ---------------------------------------------------------------------------
+class TestDiagnosticsPublishing:
+    @patch("bridge.mqtt.Client")
+    def test_diagnostics_disabled_by_default(self, mock_client_cls):
+        mock_client_cls.return_value = MagicMock()
+        from bridge import Open3EBridge
+        bridge = Open3EBridge()
+        assert bridge._diagnostics_interval == 0
+        assert bridge._diagnostics_timer is None
+
+    @patch("bridge.mqtt.Client")
+    def test_diagnostics_interval_set(self, mock_client_cls):
+        mock_client_cls.return_value = MagicMock()
+        from bridge import Open3EBridge
+        bridge = Open3EBridge(diagnostics_interval=60)
+        assert bridge._diagnostics_interval == 60
+
+    @patch("bridge.mqtt.Client")
+    def test_publish_diagnostics(self, mock_client_cls):
+        mock_instance = MagicMock()
+        mock_client_cls.return_value = mock_instance
+        from bridge import Open3EBridge
+        bridge = Open3EBridge(diagnostics_interval=300)
+        # Manually call _publish_diagnostics
+        bridge._publish_diagnostics()
+        # Should have published to diagnostics topic
+        mock_instance.publish.assert_called()
+        call_args = [c for c in mock_instance.publish.call_args_list
+                     if c[0][0] == "open3e/bridge/diagnostics"]
+        assert len(call_args) == 1
+        payload = json.loads(call_args[0][0][1])
+        assert "version" in payload
+        assert "uptime_s" in payload
+        # Timer should be rescheduled
+        assert bridge._diagnostics_timer is not None
+        bridge._cancel_diagnostics()
+
+    @patch("bridge.mqtt.Client")
+    def test_cancel_diagnostics(self, mock_client_cls):
+        mock_client_cls.return_value = MagicMock()
+        from bridge import Open3EBridge
+        bridge = Open3EBridge(diagnostics_interval=60)
+        bridge._schedule_diagnostics()
+        assert bridge._diagnostics_timer is not None
+        bridge._cancel_diagnostics()
+        assert bridge._diagnostics_timer is None
+
+    @patch("bridge.mqtt.Client")
+    def test_schedule_does_nothing_when_disabled(self, mock_client_cls):
+        mock_client_cls.return_value = MagicMock()
+        from bridge import Open3EBridge
+        bridge = Open3EBridge(diagnostics_interval=0)
+        bridge._schedule_diagnostics()
+        assert bridge._diagnostics_timer is None

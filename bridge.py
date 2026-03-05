@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import signal
+import threading
 import time
 from collections import Counter
 from importlib.metadata import version as pkg_version, PackageNotFoundError
@@ -34,7 +35,8 @@ class Open3EBridge:
                  language: str = "de", test_mode: bool = True,
                  discovery_prefix: str = "homeassistant",
                  add_test_prefix: bool = True,
-                 config_dir: str | None = None):
+                 config_dir: str | None = None,
+                 diagnostics_interval: int = 0):
 
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
@@ -76,12 +78,48 @@ class Open3EBridge:
         self._discovery_published = 0
         self._entity_types: Counter = Counter()
 
+        # Periodic diagnostics publishing
+        self._diagnostics_interval = diagnostics_interval
+        self._diagnostics_topic = "open3e/bridge/diagnostics"
+        self._diagnostics_timer: threading.Timer | None = None
+
         logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s",
                     __version__, mqtt_host, mqtt_port, language, resolved_config_dir,
                     self.generator.discovery_prefix)
 
+    def _schedule_diagnostics(self):
+        """Schedule the next periodic diagnostics publish."""
+        if self._diagnostics_interval <= 0:
+            return
+        self._diagnostics_timer = threading.Timer(
+            self._diagnostics_interval, self._publish_diagnostics
+        )
+        self._diagnostics_timer.daemon = True
+        self._diagnostics_timer.start()
+
+    def _publish_diagnostics(self):
+        """Publish diagnostics JSON to MQTT and reschedule."""
+        try:
+            diag = self.get_diagnostics()
+            self.client.publish(
+                self._diagnostics_topic,
+                json.dumps(diag),
+                retain=True,
+            )
+            logger.debug("Published diagnostics: %s", diag)
+        except Exception as e:
+            logger.warning("Failed to publish diagnostics: %s", e)
+        self._schedule_diagnostics()
+
+    def _cancel_diagnostics(self):
+        """Cancel the periodic diagnostics timer."""
+        if self._diagnostics_timer is not None:
+            self._diagnostics_timer.cancel()
+            self._diagnostics_timer = None
+
     def _graceful_shutdown(self, signum=None, frame=None):
         """Graceful shutdown: publish offline LWT, then disconnect."""
+        self._cancel_diagnostics()
         sig_name = signal.Signals(signum).name if signum else "unknown"
         logger.info("Received %s, shutting down gracefully...", sig_name)
         try:
@@ -150,6 +188,7 @@ class Open3EBridge:
             # ROB-01: Re-publish discovery when HA restarts
             client.subscribe("homeassistant/status")
             logger.debug("Subscribed to open3e topics and homeassistant/status")
+            self._schedule_diagnostics()
         else:
             logger.error("Failed to connect to MQTT broker: %s", reason_code)
 
@@ -279,6 +318,8 @@ def main():
     parser.add_argument("--cleanup", action="store_true", help="Cleanup retained discovery for open3e entities")
     parser.add_argument("--validate-config", action="store_true", help="Validate datapoints/templates and exit")
     parser.add_argument("--dump-entities", action="store_true", help="Show configured entities and exit (no MQTT needed)")
+    parser.add_argument("--diagnostics-interval", type=int, default=0,
+                        help="Publish diagnostics every N seconds to open3e/bridge/diagnostics (0=disabled)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                         help="Logging level (default: INFO)")
 
@@ -313,6 +354,7 @@ def main():
         discovery_prefix=discovery_prefix,
         add_test_prefix=not args.no_test_prefix,
         config_dir=args.config_dir,
+        diagnostics_interval=args.diagnostics_interval,
     )
 
     # Validate-only mode

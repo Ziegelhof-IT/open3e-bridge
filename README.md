@@ -153,6 +153,7 @@ Options:
   --cleanup               Remove retained discovery messages and exit
   --validate-config       Validate configuration files and exit
   --dump-entities         Show configured entities and exit (no MQTT needed)
+  --diagnostics-interval N  Publish diagnostics every N seconds (0=disabled)
   --log-level LEVEL       DEBUG, INFO, WARNING, ERROR (default: INFO)
   --discovery-prefix PFX  Custom MQTT discovery prefix (default: homeassistant)
   --no-test-prefix        Don't add test/ prefix in test/simulate mode
