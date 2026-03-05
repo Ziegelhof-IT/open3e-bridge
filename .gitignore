@@ -12,6 +12,11 @@ test_device.txt
 # User overrides (local, not committed)
 config/user/
 
+build/
+dist/
+
+docs/downloads/
+
 # Planning & tooling (nicht Teil der Bridge)
 .planning/
 .claude/
