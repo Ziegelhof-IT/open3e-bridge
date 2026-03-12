@@ -148,3 +148,13 @@ binary_onoff:
   device_class: "power"
   icon: "mdi:power"
 
+# Water heater (multi-DID: current temp + setpoint + mode)
+water_heater:
+  entity_type: "water_heater"
+  icon: "mdi:water-boiler"
+  min_temp: 10
+  max_temp: 60
+  precision: 0.5
+  temperature_unit: "C"
+  modes: ["off", "eco", "performance"]
+

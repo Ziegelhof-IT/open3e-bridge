@@ -47,6 +47,8 @@ names:
   "Thermal Power (System)": "Thermische Leistung (System)"
   "Grid Active Power": "Netz Wirkleistung"
   "Electrical Energy Statistics": "Elektrische Energie Statistik"
+  "DHW Operation Mode": "Warmwasser Betriebsmodus"
+  "Hot Water": "Warmwasser"
 
 suffixes:
   "current": "Aktuell"

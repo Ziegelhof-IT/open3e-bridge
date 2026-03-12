@@ -70,6 +70,12 @@ class HomeAssistantGenerator(BaseGenerator):
             climate_res = self._generate_climate_discovery(parsed, climate_cfg, test_mode)
             results.extend(climate_res)
 
+        # Optionale water_heater-Entität (Multi-DID: Temp + Setpoint + Mode)
+        wh_cfg = dp_config.get('water_heater')
+        if wh_cfg and did == wh_cfg.get('trigger_did', did):
+            wh_res = self._generate_water_heater_discovery(parsed, wh_cfg, test_mode)
+            results.extend(wh_res)
+
         return results
 
     def _generate_typed_discovery(self, parsed: dict[str, Any], dp_config: dict[str, Any], value: str, test_mode: bool) -> list[tuple[str, str]]:
@@ -194,6 +200,68 @@ class HomeAssistantGenerator(BaseGenerator):
         for key in ['min_temp', 'max_temp', 'precision', 'temperature_unit']:
             if key in climate_cfg:
                 config[key] = climate_cfg[key]
+
+        return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
+
+    def _generate_water_heater_discovery(self, parsed: dict[str, Any], wh_cfg: dict[str, Any], test_mode: bool) -> list[tuple[str, str]]:
+        """Generate HA water_heater MQTT discovery for DHW (multi-DID pattern)."""
+        ecu_addr = parsed['ecu_addr']
+        did = parsed['did']
+
+        entity_id = self.generate_entity_id(ecu_addr, did, 'water_heater')
+        unique_id = self.generate_unique_id(ecu_addr, did, 'water_heater')
+        discovery_topic = self._build_discovery_topic('water_heater', entity_id, test_mode)
+
+        name = self.translate_name(wh_cfg.get('name', 'Hot Water'))
+        name = self.resolve_name(did, None, name)
+
+        config: dict[str, Any] = {
+            'name': name,
+            'unique_id': unique_id,
+            'object_id': entity_id,
+            'device': self.create_device_info_for_did(ecu_addr, did),
+            'availability_topic': 'open3e/LWT',
+            'payload_available': 'online',
+            'payload_not_available': 'offline',
+        }
+
+        config['origin'] = {
+            'name': 'Open3E Bridge',
+            'sw_version': _SW_VERSION,
+            'support_url': 'https://github.com/open3e/open3e-bridge',
+        }
+
+        # Current temperature (read-only sensor, e.g. DID 271)
+        ct_did = wh_cfg.get('current_temperature_did')
+        ct_name = wh_cfg.get('current_temperature_did_name', '')
+        ct_sub = wh_cfg.get('current_temperature_sub', '')
+        if ct_did and ct_name:
+            topic_suffix = f"/{ct_sub}" if ct_sub else ""
+            config['current_temperature_topic'] = f"open3e/{ecu_addr}_{ct_did}_{ct_name}{topic_suffix}"
+
+        # Temperature setpoint (writable, e.g. DID 396)
+        temp_did = wh_cfg.get('temperature_did')
+        temp_did_name = wh_cfg.get('temperature_did_name', '')
+        if temp_did and temp_did_name:
+            config['temperature_state_topic'] = f"open3e/{ecu_addr}_{temp_did}_{temp_did_name}"
+        config['temperature_command_topic'] = 'open3e/cmnd'
+        if 'temperature_command_template' in wh_cfg:
+            config['temperature_command_template'] = wh_cfg['temperature_command_template']
+
+        # Mode (e.g. DID 531)
+        config['modes'] = wh_cfg.get('modes', ['off', 'eco', 'performance'])
+        sensor_name = parsed.get('sensor_name', '')
+        config['mode_state_topic'] = f"open3e/{ecu_addr}_{did}_{sensor_name}"
+        config['mode_command_topic'] = 'open3e/cmnd'
+        if 'mode_state_template' in wh_cfg:
+            config['mode_state_template'] = wh_cfg['mode_state_template']
+        if 'mode_command_template' in wh_cfg:
+            config['mode_command_template'] = wh_cfg['mode_command_template']
+
+        # Temperature ranges
+        for key in ['min_temp', 'max_temp', 'precision', 'temperature_unit']:
+            if key in wh_cfg:
+                config[key] = wh_cfg[key]
 
         return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
 

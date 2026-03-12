@@ -83,6 +83,23 @@ class Open3EBridge:
         self._diagnostics_topic = "open3e/bridge/diagnostics"
         self._diagnostics_timer: threading.Timer | None = None
 
+        # A01: Write verification — pending writes awaiting read-back
+        # Key: (ecu_addr, did) → expected value (str)
+        self._pending_writes: dict[tuple[str, int], str] = {}
+
+        # A08: COP calculation — latest power values
+        self._electrical_power: float | None = None  # DID 2488
+        self._thermal_power: float | None = None     # DID 2496
+        self._cop_topic = "open3e/bridge/cop"
+
+        # A09: NRC code mapping for human-readable logging
+        self._nrc_codes: dict[str, str] = {
+            "0x22": "ConditionsNotCorrect",
+            "0x31": "RequestOutOfRange",
+            "0x14": "ResponseTooLong",
+            "0x33": "SecurityAccessDenied",
+        }
+
         logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s",
                     __version__, mqtt_host, mqtt_port, language, resolved_config_dir,
                     self.generator.discovery_prefix)
@@ -164,7 +181,7 @@ class Open3EBridge:
         self.client.loop_start()
         time.sleep(timeout_s)
 
-        pattern = re.compile(rf"^{re.escape(self.generator.discovery_prefix)}/(sensor|number|select|binary_sensor|climate|switch|button)/open3e_[^/]+/config$")
+        pattern = re.compile(rf"^{re.escape(self.generator.discovery_prefix)}/(sensor|number|select|binary_sensor|climate|switch|button|water_heater)/open3e_[^/]+/config$")
         targets = [t for t in retained if pattern.match(t)]
         logger.info("Found %d retained under prefix, %d matching open3e entities.", len(retained), len(targets))
         for t in targets:
@@ -188,6 +205,8 @@ class Open3EBridge:
             # ROB-01: Re-publish discovery when HA restarts
             client.subscribe("homeassistant/status")
             logger.debug("Subscribed to open3e topics and homeassistant/status")
+            # A08: Publish COP sensor discovery
+            self._publish_cop_discovery()
             self._schedule_diagnostics()
         else:
             logger.error("Failed to connect to MQTT broker: %s", reason_code)
@@ -200,6 +219,133 @@ class Open3EBridge:
         logger.info("Re-publishing %d cached discovery configs", count)
         for topic, payload in self.published_configs.items():
             self.client.publish(topic, payload, retain=True)
+
+    # ------------------------------------------------------------------
+    # A01: Write verification
+    # ------------------------------------------------------------------
+
+    def write_and_verify(self, ecu_addr: str, did: int, value: str):
+        """Publish a write command and schedule a read-back verification.
+
+        After the write, a read command is published. When the state topic
+        updates, _check_write_verification compares the value.
+        """
+        # Publish the write command
+        write_cmd = json.dumps({"mode": "write", "data": [[did, value]]})
+        self.client.publish("open3e/cmnd", write_cmd)
+        logger.info("Write command sent: DID %d = %s", did, value)
+
+        # Track the pending write for verification
+        self._pending_writes[(ecu_addr, did)] = str(value)
+
+        # Publish a read command to verify
+        read_cmd = json.dumps({"mode": "read", "data": [did]})
+        self.client.publish("open3e/cmnd", read_cmd)
+        logger.debug("Read-back command sent for DID %d", did)
+
+    def _check_write_verification(self, ecu_addr: str, did: int, actual_value: str):
+        """Check if a pending write matches the read-back value."""
+        key = (ecu_addr, did)
+        expected = self._pending_writes.pop(key, None)
+        if expected is None:
+            return
+        if str(actual_value).strip() != str(expected).strip():
+            logger.warning(
+                "Write verification FAILED for DID %d: expected=%s, actual=%s",
+                did, expected, actual_value,
+            )
+        else:
+            logger.info("Write verification OK for DID %d: %s", did, actual_value)
+
+    # ------------------------------------------------------------------
+    # A08: COP calculation
+    # ------------------------------------------------------------------
+
+    def _publish_cop_discovery(self):
+        """Publish HA MQTT Discovery config for the COP sensor."""
+        prefix = self.discovery_prefix or "homeassistant"
+        if self.add_test_prefix and self.test_mode and not prefix.startswith("test/"):
+            prefix = f"test/{prefix}"
+        discovery_topic = f"{prefix}/sensor/open3e_bridge_cop/config"
+        config = {
+            "name": "COP",
+            "unique_id": "open3e_bridge_cop",
+            "object_id": "open3e_bridge_cop",
+            "state_topic": self._cop_topic,
+            "device_class": "power_factor",
+            "icon": "mdi:gauge",
+            "availability_topic": "open3e/bridge/LWT",
+            "payload_available": "online",
+            "payload_not_available": "offline",
+            "device": {
+                "identifiers": ["open3e_bridge"],
+                "name": "Open3E Bridge",
+                "manufacturer": "Open3E",
+            },
+            "origin": {
+                "name": "Open3E Bridge",
+                "sw_version": __version__,
+                "support_url": "https://github.com/open3e/open3e-bridge",
+            },
+        }
+        payload = json.dumps(config, ensure_ascii=False)
+        self.client.publish(discovery_topic, payload, retain=True)
+        self.published_configs[discovery_topic] = payload
+        logger.debug("Published COP discovery: %s", discovery_topic)
+
+    def _update_cop(self, did: int, value: str):
+        """Update COP calculation when power DIDs arrive."""
+        try:
+            fval = float(value)
+        except (ValueError, TypeError):
+            return
+
+        if did == 2488:
+            self._electrical_power = fval
+        elif did == 2496:
+            self._thermal_power = fval
+        else:
+            return
+
+        # Calculate and publish COP if both values available and electrical > 0
+        if (self._electrical_power is not None
+                and self._thermal_power is not None
+                and self._electrical_power > 0):
+            cop = round(self._thermal_power / self._electrical_power, 2)
+            self.client.publish(self._cop_topic, str(cop), retain=True)
+            logger.debug("COP updated: %.2f (thermal=%.0fW, electrical=%.0fW)",
+                         cop, self._thermal_power, self._electrical_power)
+
+    # ------------------------------------------------------------------
+    # A09: NRC handling
+    # ------------------------------------------------------------------
+
+    _NRC_PATTERN = re.compile(r"NRC\s*(0x[0-9a-fA-F]{2})")
+
+    def _is_nrc_payload(self, payload: str) -> bool:
+        """Check if payload is an NRC (Negative Response Code) from open3e."""
+        if not payload:
+            return False
+        stripped = payload.strip()
+        return stripped.startswith("NRC") or stripped.startswith("ConditionsNotCorrect") or stripped.startswith("RequestOutOfRange")
+
+    def _handle_nrc(self, topic: str, payload: str) -> bool:
+        """Handle NRC payloads — log human-readable message, return True if NRC detected."""
+        if not self._is_nrc_payload(payload):
+            return False
+
+        match = self._NRC_PATTERN.search(payload)
+        if match:
+            code = match.group(1)
+            meaning = self._nrc_codes.get(code, "Unknown NRC")
+            logger.warning("NRC on %s: %s (%s)", topic, code, meaning)
+        else:
+            logger.warning("NRC on %s: %s", topic, payload.strip())
+        return True
+
+    # ------------------------------------------------------------------
+    # Main message processing
+    # ------------------------------------------------------------------
 
     def process_message(self, topic: str, payload: str):
         """Public API: process an Open3E message (topic + decoded payload string).
@@ -217,6 +363,19 @@ class Open3EBridge:
 
         logger.debug("Processing: %s = %s", topic, payload)
         self._messages_processed += 1
+
+        # A09: NRC detection — log but don't generate discovery
+        if self._handle_nrc(topic, payload):
+            return
+
+        # A08: COP calculation for power DIDs
+        parsed = self.generator.parse_open3e_topic(topic)
+        if parsed:
+            did = parsed['did']
+            ecu_addr = parsed['ecu_addr']
+            self._update_cop(did, payload)
+            # A01: Write verification check
+            self._check_write_verification(ecu_addr, did, payload)
 
         # Generiere Discovery Messages
         discovery_messages = self.generator.generate_discovery_message(

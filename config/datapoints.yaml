@@ -139,6 +139,38 @@ datapoints:
     writable: true
     write_mode: "write"
 
+  # DomesticHotWaterOperationState - EXPERIMENTAL: Mode mapping from Vitodens docs,
+  # Vitocal 250 mode values NOT YET CONFIRMED on real hardware
+  531:  # DomesticHotWaterOperationState
+    type: "generic_sensor"
+    name: "DHW Operation Mode"
+    device: "tank"
+    icon: "mdi:water-boiler"
+    water_heater:
+      name: "Hot Water"
+      trigger_did: 531
+      current_temperature_did: 271
+      current_temperature_did_name: "DomesticHotWaterSensor"
+      current_temperature_sub: "Actual"
+      temperature_did: 396
+      temperature_did_name: "DomesticHotWaterTemperatureSetpoint"
+      modes: ["off", "eco", "performance"]
+      # EXPERIMENTAL mode mapping — values unconfirmed for Vitocal
+      mode_state_template: >
+        {% set m = value | int(0) %}
+        {% if m == 0 %}off{% elif m == 1 %}eco{% else %}performance{% endif %}
+      mode_command_template: >
+        {% set values = {'off': '0000', 'eco': '0100', 'performance': '0200'} %}
+        {% set cmd = {'mode': 'write-raw', 'data': [[531, values[value]]]} %}
+        {{ cmd | to_json }}
+      temperature_command_template: >
+        {% set cmd = {'mode': 'write', 'data': [[396, value | float]]} %}
+        {{ cmd | to_json }}
+      min_temp: 10
+      max_temp: 60
+      precision: 0.5
+      temperature_unit: "C"
+
   # Vitocal 250 - simple migrations from manual HA config
   2442:  # HeatPumpFrostProtection
     type: "binary_onoff"
