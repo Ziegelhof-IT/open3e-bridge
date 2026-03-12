@@ -314,20 +314,63 @@ datapoints:
       {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
 
   # --- Holiday mode (Phase 2.2) ---
-  # DID 511/512 use RawCodec(8) — 8 bytes, internal structure undocumented.
-  # Likely start+end date range. Exposed as raw hex sensor for visibility.
-  # Write support requires reverse-engineering the date format.
+  # DID 511/512: O3EComplexType(8) — PhaseBegin(3) + PhaseEnd(3) + Planned(1) + Active(1)
+  # O3ESdate encoding: [day, month, year-2000]. open3e publishes decoded sub-items.
   511:  # HolidayPhase
-    type: "generic_sensor"
+    type: "holiday_phase"
     name: "Holiday Mode"
     device: "system"
-    icon: "mdi:beach"
+    subs:
+      PhaseBegin:
+        suffix: "start"
+        entity_type: "sensor"
+        icon: "mdi:calendar-arrow-right"
+      PhaseEnd:
+        suffix: "end"
+        entity_type: "sensor"
+        icon: "mdi:calendar-arrow-left"
+      Planned:
+        suffix: "planned"
+        entity_type: "binary_sensor"
+        device_class: "running"
+        icon: "mdi:calendar-check"
+        payload_on: "1"
+        payload_off: "0"
+      Active:
+        suffix: "active"
+        entity_type: "binary_sensor"
+        device_class: "running"
+        icon: "mdi:calendar-today"
+        payload_on: "1"
+        payload_off: "0"
 
   512:  # HolidayAtHomePhase
-    type: "generic_sensor"
+    type: "holiday_phase"
     name: "Holiday At Home Mode"
     device: "system"
-    icon: "mdi:home-account"
+    subs:
+      PhaseBegin:
+        suffix: "start"
+        entity_type: "sensor"
+        icon: "mdi:calendar-arrow-right"
+      PhaseEnd:
+        suffix: "end"
+        entity_type: "sensor"
+        icon: "mdi:calendar-arrow-left"
+      Planned:
+        suffix: "planned"
+        entity_type: "binary_sensor"
+        device_class: "running"
+        icon: "mdi:calendar-check"
+        payload_on: "1"
+        payload_off: "0"
+      Active:
+        suffix: "active"
+        entity_type: "binary_sensor"
+        device_class: "running"
+        icon: "mdi:calendar-today"
+        payload_on: "1"
+        payload_off: "0"
 
   # --- Heating circuit operation modes (base: off/auto) ---
   # Overridden in vitocal.yaml with heat/cool modes

@@ -158,6 +158,26 @@ schedule_sensor:
   entity_type: "sensor"
   icon: "mdi:calendar-clock"
 
+# Holiday phase (multi-sensor: start/end dates + planned/active flags)
+holiday_phase:
+  entity_type: "multi_sensor"
+  icon: "mdi:beach"
+  sub_types:
+    start_date:
+      entity_type: "sensor"
+      icon: "mdi:calendar-arrow-right"
+    end_date:
+      entity_type: "sensor"
+      icon: "mdi:calendar-arrow-left"
+    planned:
+      entity_type: "binary_sensor"
+      device_class: "running"
+      icon: "mdi:calendar-check"
+    active:
+      entity_type: "binary_sensor"
+      device_class: "running"
+      icon: "mdi:calendar-today"
+
 # Water heater (multi-DID: current temp + setpoint + mode)
 water_heater:
   entity_type: "water_heater"

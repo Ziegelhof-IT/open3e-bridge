@@ -82,6 +82,9 @@ names:
   "Holiday At Home Mode": "Ferien Zuhause"
   "Eco Heating Limit": "Eco Heizgrenze"
   "Eco Cooling Limit": "Eco Kuehlgrenze"
+  "Heating Curve Circuit 1": "Heizkurve Heizkreis 1"
+  "Heating Curve Circuit 2": "Heizkurve Heizkreis 2"
+  "Brine Temperature": "Sole-Temperatur"
 
 modes:
   "off": "Aus"
@@ -111,6 +114,12 @@ suffixes:
   "setpoint": "Sollwert"
   "hours": "Stunden"
   "starts": "Starts"
+  "start": "Beginn"
+  "end": "Ende"
+  "planned": "Geplant"
+  "active": "Aktiv"
+  "gradient": "Steilheit"
+  "level": "Niveau"
 
 devices:
   "Vitocal 250-A Outdoor Unit": "Vitocal 250-A Ausseneinheit"
