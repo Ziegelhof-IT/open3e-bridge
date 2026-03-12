@@ -154,164 +154,241 @@ datapoints:
       {% set count = data.get('Count', 0) | int(0) %}
       {% if count == 0 %}No errors{% else %}{{ count }} active{% endif %}
 
-  # --- Schedule DIDs (read-only, Phase 2.1) ---
+  # --- Schedule DIDs (writable text entities) ---
+  # Format: "HH:MM-HH:MM" (single) or "HH:MM-HH:MM,HH:MM-HH:MM" (multiple slots)
   # DHW schedules (Monday-Sunday)
   691:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Monday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_691_DomesticHotWaterTimeScheduleMonday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
+    writable: true
+    value_template: &schedule_value_template >
       {% set data = value_json if value_json is mapping else {} %}
       {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+      {% if s | length == 0 %}{% else %}
+      {% set ns = namespace(parts=[]) %}
+      {% for e in s %}{% set ns.parts = ns.parts + [e.get('Start','') ~ '-' ~ e.get('Stop','')] %}{% endfor %}
+      {{ ns.parts | join(',') }}{% endif %}
+    command_template: &schedule_cmd_691 >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[691, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   692:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Tuesday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_692_DomesticHotWaterTimeScheduleTuesday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[692, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   693:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Wednesday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_693_DomesticHotWaterTimeScheduleWednesday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[693, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   694:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Thursday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_694_DomesticHotWaterTimeScheduleThursday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[694, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   695:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Friday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_695_DomesticHotWaterTimeScheduleFriday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[695, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   696:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Saturday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_696_DomesticHotWaterTimeScheduleSaturday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[696, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   697:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "DHW Schedule Sunday"
     device: "dhw"
-    json_attributes_topic: "open3e/680_697_DomesticHotWaterTimeScheduleSunday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[697, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
 
   # Heating circuit 1 schedules (Monday-Sunday)
   761:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Monday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_761_MixerOneCircuitTimeScheduleMonday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[761, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   762:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Tuesday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_762_MixerOneCircuitTimeScheduleTuesday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[762, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   763:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Wednesday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_763_MixerOneCircuitTimeScheduleWednesday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[763, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   764:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Thursday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_764_MixerOneCircuitTimeScheduleThursday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[764, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   765:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Friday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_765_MixerOneCircuitTimeScheduleFriday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[765, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   766:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Saturday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_766_MixerOneCircuitTimeScheduleSaturday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[766, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
   767:
-    type: "schedule_sensor"
+    type: "schedule_edit"
     name: "HK1 Schedule Sunday"
     device: "circuit"
-    json_attributes_topic: "open3e/680_767_MixerOneCircuitTimeScheduleSunday"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set s = data.get('Schedules', []) %}
-      {% if s | length == 0 %}inactive
-      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+    writable: true
+    value_template: *schedule_value_template
+    command_template: >
+      {% set ns = namespace(schedules=[]) %}
+      {% for slot in value.split(',') %}
+      {% set times = slot.strip().split('-') %}
+      {% if times | length == 2 %}
+      {% set ns.schedules = ns.schedules + [{'Start': times[0].strip(), 'Stop': times[1].strip(), 'Unknown': '0000', 'Mode': 4}] %}
+      {% endif %}
+      {% endfor %}
+      {% set cmd = {'mode': 'write', 'data': [[767, {'Count': ns.schedules | length, 'Schedules': ns.schedules}]]} %}
+      {{ cmd | to_json }}
 
   # --- Holiday mode (Phase 2.2) ---
   # DID 511/512: O3EComplexType(8) — PhaseBegin(3) + PhaseEnd(3) + Planned(1) + Active(1)

@@ -158,6 +158,14 @@ schedule_sensor:
   entity_type: "sensor"
   icon: "mdi:calendar-clock"
 
+# Schedule editor (writable text entity for time programs)
+# Format: "HH:MM-HH:MM" or "HH:MM-HH:MM,HH:MM-HH:MM" for multiple slots
+schedule_edit:
+  entity_type: "text"
+  icon: "mdi:calendar-edit"
+  min: 0
+  max: 95
+
 # Holiday phase (multi-sensor: start/end dates + planned/active flags)
 holiday_phase:
   entity_type: "multi_sensor"

@@ -180,15 +180,17 @@ class TestErrorListEntities:
 
 
 class TestScheduleEntities:
-    """Phase 2.1: Schedule sensors."""
+    """Phase 2.1: Schedule entities (writable text)."""
 
-    def test_schedule_did_generates_sensor(self):
+    def test_schedule_did_generates_text_entity(self):
         gen = HomeAssistantGenerator(config_dir=CONFIG_DIR, language="en", profile="common")
         topic = "open3e/680_691_DomesticHotWaterTimeScheduleMonday"
         out = gen.generate_discovery_message(topic, '{"Count": 1, "Schedules": [{"Start": "06:00", "Stop": "22:00"}]}', test_mode=True)
         assert len(out) >= 1
-        data = json.loads(out[0][1])
-        assert "json_attributes_topic" in data
+        disc_topic, payload = out[0]
+        data = json.loads(payload)
+        assert "text" in disc_topic
+        assert data.get("command_topic") == "open3e/cmnd"
 
 
 class TestAutoDiscoverDefault:
