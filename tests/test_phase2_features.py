@@ -177,7 +177,7 @@ class TestMqttPasswordEnvVar:
         mock_instance = MagicMock()
         mock_client_cls.return_value = mock_instance
         from bridge import Open3EBridge
-        bridge = Open3EBridge(mqtt_user="testuser", mqtt_password="from_env")
+        Open3EBridge(mqtt_user="testuser", mqtt_password="from_env")
         mock_instance.username_pw_set.assert_called_once_with("testuser", "from_env")
 
     @patch("bridge.mqtt.Client")
@@ -210,6 +210,7 @@ class TestEntityTypeTracking:
     def test_log_entity_summary(self, mock_client_cls, caplog):
         mock_client_cls.return_value = MagicMock()
         import logging
+
         from bridge import Open3EBridge
         bridge = Open3EBridge()
         bridge.process_message("open3e/680_274_OutsideTemperatureSensor/Actual", "12.5")
@@ -221,6 +222,7 @@ class TestEntityTypeTracking:
     def test_log_entity_summary_empty(self, mock_client_cls, caplog):
         mock_client_cls.return_value = MagicMock()
         import logging
+
         from bridge import Open3EBridge
         bridge = Open3EBridge()
         with caplog.at_level(logging.INFO):

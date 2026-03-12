@@ -3,12 +3,13 @@ Home Assistant MQTT Discovery Generator
 """
 import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from .base import BaseGenerator
 
 try:
-    from importlib.metadata import version as pkg_version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
     _SW_VERSION = pkg_version("open3e-bridge")
 except (PackageNotFoundError, Exception):
     _SW_VERSION = "0.1.0-dev"
@@ -32,7 +33,7 @@ class HomeAssistantGenerator(BaseGenerator):
         self.discovery_prefix = discovery_prefix
         self.add_test_prefix = add_test_prefix
 
-    def generate_discovery_message(self, topic: str, value: str, test_mode: bool = True) -> List[Tuple[str, str]]:
+    def generate_discovery_message(self, topic: str, value: str, test_mode: bool = True) -> list[tuple[str, str]]:
         """
         Generiert Home Assistant Discovery Messages für ein Open3E Topic
 
@@ -71,7 +72,7 @@ class HomeAssistantGenerator(BaseGenerator):
 
         return results
 
-    def _generate_typed_discovery(self, parsed: Dict[str, Any], dp_config: Dict[str, Any], value: str, test_mode: bool) -> List[Tuple[str, str]]:
+    def _generate_typed_discovery(self, parsed: dict[str, Any], dp_config: dict[str, Any], value: str, test_mode: bool) -> list[tuple[str, str]]:
         """Generiert Discovery Messages basierend auf Datenpunkt-Typ"""
         type_name = dp_config.get('type')
         if not type_name:
@@ -140,7 +141,7 @@ class HomeAssistantGenerator(BaseGenerator):
 
         return results
 
-    def _generate_climate_discovery(self, parsed: Dict[str, Any], climate_cfg: Dict[str, Any], test_mode: bool) -> List[Tuple[str, str]]:
+    def _generate_climate_discovery(self, parsed: dict[str, Any], climate_cfg: dict[str, Any], test_mode: bool) -> list[tuple[str, str]]:
         ecu_addr = parsed['ecu_addr']
         did = parsed['did']
         sensor_name = parsed['sensor_name']
@@ -156,7 +157,7 @@ class HomeAssistantGenerator(BaseGenerator):
         name = self.translate_name(climate_cfg.get('name', 'Climate'))
         name = self.resolve_name(did, None, name)
 
-        config: Dict[str, Any] = {
+        config: dict[str, Any] = {
             'name': name,
             'unique_id': unique_id,
             'object_id': entity_id,
@@ -205,8 +206,8 @@ class HomeAssistantGenerator(BaseGenerator):
         return f"{prefix}/{entity_type}/{entity_id}/config"
 
     def _build_entity_config(self, name: str, unique_id: str, entity_id: str, state_topic: str,
-                           ecu_addr: str, template: Dict[str, Any], dp_config: Dict[str, Any],
-                           did: int, entity_type: str = "sensor") -> Dict[str, Any]:
+                           ecu_addr: str, template: dict[str, Any], dp_config: dict[str, Any],
+                           did: int, entity_type: str = "sensor") -> dict[str, Any]:
         """Baut Entity-Konfiguration zusammen"""
         config = {
             "name": name,
@@ -240,7 +241,7 @@ class HomeAssistantGenerator(BaseGenerator):
         # Origin information
         config["origin"] = {
             "name": "Open3E Bridge",
-            "sw_version": "0.1.0",
+            "sw_version": _SW_VERSION,
             "support_url": "https://github.com/open3e/open3e-bridge",
         }
 

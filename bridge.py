@@ -14,9 +14,9 @@ import signal
 import threading
 import time
 from collections import Counter
-from importlib.metadata import version as pkg_version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 from pathlib import Path
-from typing import Dict, Set
 
 import paho.mqtt.client as mqtt
 
@@ -70,7 +70,7 @@ class Open3EBridge:
         )
 
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
-        self.published_configs: Dict[str, str] = {}
+        self.published_configs: dict[str, str] = {}
 
         # Diagnostics counters
         self._start_time = time.monotonic()
@@ -125,8 +125,8 @@ class Open3EBridge:
         try:
             self.client.publish(self.lwt_topic, "offline", qos=1, retain=True)
             self.client.disconnect()
-        except Exception:
-            pass
+        except Exception:  # noqa: S110
+            pass  # best-effort during shutdown
 
     def start(self):
         """Startet die Bridge"""
@@ -144,7 +144,7 @@ class Open3EBridge:
 
     def cleanup(self, timeout_s: float = 2.0):
         """Löscht alte Discovery-Konfigurationen (Retain leeren) für open3e-Entities."""
-        retained: Set[str] = set()
+        retained: set[str] = set()
 
         def _on_connect(client, userdata, connect_flags, reason_code, properties):
             if reason_code == 0:
@@ -254,7 +254,7 @@ class Open3EBridge:
         except Exception as e:
             logger.error("Unexpected error processing %s: %s", msg.topic, e, exc_info=True)
 
-    def get_diagnostics(self) -> Dict[str, object]:
+    def get_diagnostics(self) -> dict[str, object]:
         """Return bridge diagnostics as a dict (for monitoring / health checks)."""
         uptime = time.monotonic() - self._start_time
         return {
@@ -394,7 +394,7 @@ def simulate_from_file(bridge: Open3EBridge, filepath: str):
         logger.info("Connecting to MQTT broker %s:%d for simulation...", bridge.mqtt_host, bridge.mqtt_port)
         bridge.client.connect(bridge.mqtt_host, bridge.mqtt_port, 60)
         bridge.client.loop_start()
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith('#'):

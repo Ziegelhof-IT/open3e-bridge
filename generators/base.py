@@ -4,7 +4,7 @@ Base generator for MQTT Discovery Messages
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -61,7 +61,7 @@ class BaseGenerator:
         return self.translations.get("suffixes", {}).get(
             suffix_key, _EN_SUFFIXES.get(suffix_key, suffix_key))
 
-    def translate_string(self, key: str, fallback: str = None) -> str:
+    def translate_string(self, key: str, fallback: str | None = None) -> str:
         """Translate misc strings (suggested_area). EN: fallback, other: overlay."""
         if self.language == "en":
             return fallback or key
@@ -99,10 +99,10 @@ class BaseGenerator:
     # Validation
     # ------------------------------------------------------------------
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:  # noqa: C901
         """Validates datapoints and templates. Returns dict with errors/warnings."""
-        errors: List[str] = []
-        warnings: List[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
 
         # Validate write_blacklisted_dids
         wbl = self.datapoints.get('write_blacklisted_dids')
@@ -181,14 +181,14 @@ class BaseGenerator:
         return {"errors": errors, "warnings": warnings}
 
     @staticmethod
-    def _validate_jinja_templates(dps: Dict, errors: List[str]):
+    def _validate_jinja_templates(dps: dict, errors: list[str]):
         """Validate Jinja2 syntax in all templates found in datapoints config."""
         try:
             from jinja2 import Environment, TemplateSyntaxError
         except ImportError:
             return  # jinja2 is a dev dependency, skip if not installed
 
-        env = Environment()
+        env = Environment(autoescape=False)  # noqa: S701 — MQTT payloads, not HTML
         template_keys = ('value_template', 'command_template',
                          'mode_state_template', 'mode_command_template',
                          'temperature_command_template')
@@ -218,20 +218,20 @@ class BaseGenerator:
                     if tk in climate and isinstance(climate[tk], str):
                         _check(key, f"climate {tk}", climate[tk])
 
-    def _load_yaml(self, filepath: Path) -> Dict[str, Any]:
+    def _load_yaml(self, filepath: Path) -> dict[str, Any]:
         """Load YAML file"""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding='utf-8') as f:
                 return yaml.safe_load(f) or {}
         except FileNotFoundError:
             logger.warning("Config file not found: %s", filepath)
             return {}
 
-    def get_datapoint_config(self, did: int) -> Optional[Dict[str, Any]]:
+    def get_datapoint_config(self, did: int) -> dict[str, Any] | None:
         """Get config for a datapoint"""
         return self.datapoints.get("datapoints", {}).get(did)
 
-    def get_type_template(self, type_name: str) -> Dict[str, Any]:
+    def get_type_template(self, type_name: str) -> dict[str, Any]:
         """Get template for a type"""
         return self.type_templates.get(type_name, {})
 
@@ -243,7 +243,7 @@ class BaseGenerator:
         """Check if DID is write-blacklisted (read allowed, write blocked)."""
         return did in self.datapoints.get("write_blacklisted_dids", [])
 
-    def parse_open3e_topic(self, topic: str) -> Optional[Dict[str, Any]]:
+    def parse_open3e_topic(self, topic: str) -> dict[str, Any] | None:
         """
         Parse Open3E MQTT Topic
         Format: open3e/680_268_FlowTemperatureSensor/Actual
@@ -280,7 +280,7 @@ class BaseGenerator:
         except (ValueError, IndexError):
             return None
 
-    def generate_entity_id(self, ecu_addr: str, did: int, sub_item: str = None) -> str:
+    def generate_entity_id(self, ecu_addr: str, did: int, sub_item: str | None = None) -> str:
         """Generate Entity ID"""
         base_id = f"open3e_{ecu_addr}_{did}"
         if sub_item and sub_item.lower() != 'unknown':
@@ -289,7 +289,7 @@ class BaseGenerator:
             base_id += f"_{cleaned}"
         return base_id
 
-    def generate_unique_id(self, ecu_addr: str, did: int, sub_item: str = None) -> str:
+    def generate_unique_id(self, ecu_addr: str, did: int, sub_item: str | None = None) -> str:
         """Generate Unique ID for Home Assistant"""
         return self.generate_entity_id(ecu_addr, did, sub_item)
 
@@ -308,8 +308,8 @@ class BaseGenerator:
             try:
                 if int(did) == 377 or device_id_dids.get(did, {}).get('extract_serial'):
                     device_info['serial'] = str(value).strip()
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # best-effort serial extraction
 
             # Cache for this ECU
             if ecu_addr not in self.device_cache:
@@ -317,7 +317,7 @@ class BaseGenerator:
 
             self.device_cache[ecu_addr].update(device_info)
 
-    def _extract_device_info(self, value: str) -> Dict[str, str]:
+    def _extract_device_info(self, value: str) -> dict[str, str]:
         """Extract device info from a value"""
         device_patterns = self.datapoints.get("device_patterns", [])
 
@@ -337,7 +337,7 @@ class BaseGenerator:
             "model": clean_value or "E3 Controller"
         }
 
-    def create_device_info(self, ecu_addr: str, device_name: str = None) -> Dict[str, Any]:
+    def create_device_info(self, ecu_addr: str, device_name: str | None = None) -> dict[str, Any]:
         """Create device info"""
         # Use cached device info if available
         cached_info = self.device_cache.get(ecu_addr, {})
@@ -372,7 +372,7 @@ class BaseGenerator:
 
         return info
 
-    def create_device_info_for_did(self, ecu_addr: str, did: int) -> Dict[str, Any]:
+    def create_device_info_for_did(self, ecu_addr: str, did: int) -> dict[str, Any]:
         """Create device info for a specific DID, using per-device mapping if configured."""
         dp_config = self.get_datapoint_config(did)
         device_key = dp_config.get('device') if dp_config else None
@@ -396,7 +396,7 @@ class BaseGenerator:
             "suggested_area": self.translate_string("suggested_area", "Heating"),
         }
 
-    def merge_config(self, base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
+    def merge_config(self, base_config: dict[str, Any], override_config: dict[str, Any]) -> dict[str, Any]:
         """Merge configs together"""
         result = base_config.copy()
         for key, value in override_config.items():

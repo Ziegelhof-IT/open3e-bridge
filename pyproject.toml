@@ -20,6 +20,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "jinja2",
+    "pyright",
 ]
 e2e = [
     "docker>=7.0",
@@ -40,19 +41,29 @@ open3e-bridge = "bridge:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["e2e: End-to-end tests (require Docker)"]
+markers = [
+    "e2e: End-to-end tests (require Docker)",
+    "unit: Unit tests",
+    "integration: Integration tests",
+]
 
 [tool.pyright]
 venvPath = "."
 venv = "venv"
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
-exclude = ["venv", "build", "dist", "docs"]
+exclude = ["venv", "build", "dist", "docs", "tests"]
 
 [tool.ruff]
 line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
+select = ["E", "F", "W", "I", "S", "C9", "UP"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S106", "S603", "S701"]  # tests: assert, hardcoded passwords, subprocess, jinja2 autoescape
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
