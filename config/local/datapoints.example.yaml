@@ -1,0 +1,21 @@
+# Local Datapoints Overlay
+# Copy this file to datapoints.yaml to add custom DIDs without modifying
+# the shipped config. Your changes survive updates (git pull).
+#
+# Only the sections you define here are merged — everything else
+# comes from the main config/datapoints.yaml.
+#
+# Example: Add a custom DID and device
+
+# devices:
+#   my_buffer:
+#     name: "Buffer Tank"
+#     model: "Custom"
+
+# datapoints:
+#   1234:
+#     type: "temperature_sensor"
+#     name: "Buffer Temperature"
+#     device: "my_buffer"
+#     subs:
+#       Actual: { suffix: "current" }

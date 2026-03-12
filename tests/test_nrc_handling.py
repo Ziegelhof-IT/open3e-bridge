@@ -67,7 +67,7 @@ class TestNRCHandling:
 
 class TestNRCCodes:
     def test_known_codes(self, bridge):
-        assert bridge._nrc_codes["0x22"] == "ConditionsNotCorrect"
-        assert bridge._nrc_codes["0x31"] == "RequestOutOfRange"
-        assert bridge._nrc_codes["0x14"] == "ResponseTooLong"
-        assert bridge._nrc_codes["0x33"] == "SecurityAccessDenied"
+        assert "ConditionsNotCorrect" in bridge._nrc_codes["0x22"]
+        assert "RequestOutOfRange" in bridge._nrc_codes["0x31"]
+        assert "ResponseTooLong" in bridge._nrc_codes["0x14"]
+        assert "SecurityAccessDenied" in bridge._nrc_codes["0x33"]

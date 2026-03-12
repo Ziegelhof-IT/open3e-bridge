@@ -1,0 +1,3 @@
+# Ignore local overlay files (keep only the example)
+*.yaml
+!*.example.yaml
