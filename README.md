@@ -349,6 +349,68 @@ Options:
   --version               Show version and exit
 ```
 
+## Energy Monitoring
+
+The bridge provides several energy-related entities out of the box. Combined with Home Assistant's built-in energy features, you can build a complete monitoring solution.
+
+### Available Energy DIDs
+
+| DID | Name | Type | Unit | Notes |
+|-----|------|------|------|-------|
+| 2488 | Power Consumption (System) | power_sensor | W | Real-time electrical power draw |
+| 2496 | Thermal Power (System) | power_sensor | W | Real-time thermal output |
+| 535 | Electrical Energy Statistics | energy_sensor | kWh | 3 counters: GridSupplied, Produced, FeedIn |
+| 1603 | Grid Active Power | power_sensor | W | Current grid power (Vitocal) |
+| 1834 | PV Power Generation | power_sensor | W | PV generation (if configured) |
+
+### COP (Coefficient of Performance)
+
+The bridge automatically calculates COP when both DID 2488 (electrical) and DID 2496 (thermal) are polled by open3e:
+
+- Published to `open3e/bridge/cop` as a real-time value
+- Creates `sensor.open3e_bridge_cop` in HA
+- Not published when compressor is off (electrical power = 0)
+
+### HA Energy Dashboard
+
+DID 535 sub-items use `state_class: total_increasing`, making them directly usable in the HA Energy Dashboard:
+
+1. Go to **Settings > Dashboards > Energy**
+2. Under "Grid consumption", add `sensor.535_objectelectricalenergystatistical_gridsuppliedenergy`
+3. Under "Return to grid", add `sensor.535_objectelectricalenergystatistical_gridfedinenergy`
+
+### Daily/Monthly COP with utility_meter
+
+Create HA helpers to track COP over time. Add to your HA `configuration.yaml`:
+
+```yaml
+# Track energy consumed and produced per day/month
+utility_meter:
+  daily_electrical_energy:
+    source: sensor.535_objectelectricalenergystatistical_gridsuppliedenergy
+    cycle: daily
+  monthly_electrical_energy:
+    source: sensor.535_objectelectricalenergystatistical_gridsuppliedenergy
+    cycle: monthly
+```
+
+For daily COP, create a template sensor in HA:
+
+```yaml
+template:
+  - sensor:
+      - name: "Daily COP"
+        unit_of_measurement: ""
+        state: >
+          {% set thermal = states('sensor.daily_thermal_energy') | float(0) %}
+          {% set electrical = states('sensor.daily_electrical_energy') | float(0) %}
+          {% if electrical > 0 %}{{ (thermal / electrical) | round(2) }}{% else %}0{% endif %}
+```
+
+### JAZ (Jahresarbeitszahl / Annual COP)
+
+Use HA's long-term statistics to calculate annual efficiency. The `total_increasing` energy sensors accumulate over the year — compare start-of-year and current values in a template or use the HA Statistics integration.
+
 ## Troubleshooting
 
 ### No entities appear in Home Assistant

@@ -316,6 +316,8 @@ datapoints:
   # --- Holiday mode (Phase 2.2) ---
   # DID 511/512: O3EComplexType(8) — PhaseBegin(3) + PhaseEnd(3) + Planned(1) + Active(1)
   # O3ESdate encoding: [day, month, year-2000]. open3e publishes decoded sub-items.
+  # Write support: blocked by upstream — O3ESdate.encode not implemented in open3e yet.
+  # Once upstream adds encode, add command_templates here for date writing.
   511:  # HolidayPhase
     type: "holiday_phase"
     name: "Holiday Mode"
