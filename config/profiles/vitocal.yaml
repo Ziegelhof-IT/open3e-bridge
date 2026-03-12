@@ -546,6 +546,47 @@ datapoints:
         {% set cmd = {'mode': 'write-raw', 'data':[[426, cmddata]]} %}
         {{ cmd | to_json }}
 
+  # --- Heating curve (read-only) ---
+  # DID 880/881: O3EComplexType(4) — Gradient(1, scale=10) + Level(1, signed) + BasePoint(2, scale=10)
+  # Writing not confirmed safe via open3e; read-only for now.
+  880:  # MixerOneCircuitCentralHeatingCurve
+    type: "generic_sensor"
+    name: "Heating Curve Circuit 1"
+    device: "mixer"
+    icon: "mdi:chart-bell-curve-cumulative"
+    subs:
+      Gradient:
+        suffix: "gradient"
+        entity_type: "sensor"
+        icon: "mdi:slope-uphill"
+        unit_of_measurement: ""
+        state_class: "measurement"
+      Level:
+        suffix: "level"
+        entity_type: "sensor"
+        icon: "mdi:arrow-up-down"
+        unit_of_measurement: "K"
+        state_class: "measurement"
+
+  881:  # MixerTwoCircuitCentralHeatingCurve
+    type: "generic_sensor"
+    name: "Heating Curve Circuit 2"
+    device: "mixer"
+    icon: "mdi:chart-bell-curve-cumulative"
+    subs:
+      Gradient:
+        suffix: "gradient"
+        entity_type: "sensor"
+        icon: "mdi:slope-uphill"
+        unit_of_measurement: ""
+        state_class: "measurement"
+      Level:
+        suffix: "level"
+        entity_type: "sensor"
+        icon: "mdi:arrow-up-down"
+        unit_of_measurement: "K"
+        state_class: "measurement"
+
   # --- Heating curve eco limits (Phase 2.3) ---
   # Read-only: full heating curve is a complex multi-DID calculation,
   # these show the eco-mode boundaries
