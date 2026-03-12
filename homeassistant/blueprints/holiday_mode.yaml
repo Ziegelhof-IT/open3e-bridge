@@ -1,0 +1,123 @@
+blueprint:
+  name: "Open3E Urlaubsmodus"
+  description: >
+    Simuliert den Urlaubsmodus fuer Open3E Heizungsanlagen ueber Home Assistant.
+    Senkt die Heizung auf Reduziert-Temperatur und die Warmwasser-Temperatur
+    waehrend des eingestellten Zeitraums. Stellt am Ende automatisch den
+    Normalbetrieb wieder her.
+
+    Voraussetzungen: Open3E Bridge mit MQTT-Integration in Home Assistant.
+  domain: automation
+  author: "Open3E Community"
+  source_url: "https://github.com/open3e/open3e-bridge"
+  input:
+    vacation_start:
+      name: "Urlaubsbeginn"
+      description: "Erster Tag des Urlaubs"
+      selector:
+        date:
+    vacation_end:
+      name: "Urlaubsende"
+      description: "Letzter Tag des Urlaubs (Heizung wird an diesem Tag wieder auf Normal gestellt)"
+      selector:
+        date:
+    circuit1_mode_entity:
+      name: "Heizkreis 1 Betriebsmodus"
+      description: "Select-Entity fuer den Betriebsmodus von Heizkreis 1"
+      default: "select.open3e_680_1415_mode_id"
+      selector:
+        entity:
+          domain: select
+    circuit1_reduced_entity:
+      name: "Heizkreis 1 Reduziert-Temperatur"
+      description: "Number-Entity fuer die Reduziert-Solltemperatur (DID 424 Reduced)"
+      default: "number.open3e_680_424_reduced"
+      selector:
+        entity:
+          domain: number
+    dhw_setpoint_entity:
+      name: "Warmwasser Solltemperatur"
+      description: "Number-Entity fuer die Warmwasser-Solltemperatur (DID 396)"
+      default: "number.open3e_680_396"
+      selector:
+        entity:
+          domain: number
+    vacation_reduced_temp:
+      name: "Reduzierte Raumtemperatur"
+      description: "Raumsolltemperatur waehrend des Urlaubs (°C)"
+      default: 16
+      selector:
+        number:
+          min: 5
+          max: 25
+          step: 0.5
+          unit_of_measurement: "°C"
+    vacation_dhw_temp:
+      name: "Reduzierte Warmwasser-Temperatur"
+      description: "Warmwasser-Solltemperatur waehrend des Urlaubs (°C)"
+      default: 40
+      selector:
+        number:
+          min: 10
+          max: 60
+          step: 0.5
+          unit_of_measurement: "°C"
+    normal_mode:
+      name: "Normaler Betriebsmodus"
+      description: "Betriebsmodus nach Urlaubsende (wird wiederhergestellt)"
+      default: "auto"
+      selector:
+        select:
+          options:
+            - "auto"
+            - "heat"
+
+variables:
+  v_start: !input vacation_start
+  v_end: !input vacation_end
+  v_reduced_temp: !input vacation_reduced_temp
+  v_dhw_temp: !input vacation_dhw_temp
+  v_normal_mode: !input normal_mode
+
+trigger:
+  - platform: time
+    at: "00:05:00"
+    id: daily_check
+
+condition: []
+
+action:
+  - choose:
+      # Urlaubsbeginn: Heizung reduzieren
+      - conditions:
+          - condition: template
+            value_template: "{{ today_at() >= today_at(v_start) and today_at() < today_at(v_end) }}"
+        sequence:
+          - service: select.select_option
+            target:
+              entity_id: !input circuit1_mode_entity
+            data:
+              option: "heat"
+          - service: number.set_value
+            target:
+              entity_id: !input circuit1_reduced_entity
+            data:
+              value: "{{ v_reduced_temp }}"
+          - service: number.set_value
+            target:
+              entity_id: !input dhw_setpoint_entity
+            data:
+              value: "{{ v_dhw_temp }}"
+
+      # Urlaubsende: Normalbetrieb wiederherstellen
+      - conditions:
+          - condition: template
+            value_template: "{{ today_at() >= today_at(v_end) }}"
+        sequence:
+          - service: select.select_option
+            target:
+              entity_id: !input circuit1_mode_entity
+            data:
+              option: "{{ v_normal_mode }}"
+
+mode: single
