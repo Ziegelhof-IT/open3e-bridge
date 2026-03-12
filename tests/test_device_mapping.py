@@ -1,8 +1,6 @@
 """Tests for per-DID device mapping (physical device separation in HA)."""
 import json
 
-from generators.base import BaseGenerator
-
 
 class TestDeviceInfoForDid:
     """Tests for BaseGenerator.create_device_info_for_did."""
