@@ -268,6 +268,32 @@ Entity names are English in `datapoints.yaml`. Add a translation file (e.g., `de
 
 Custom entity names that survive updates. Copy `names.example.yaml` to `names.yaml` and edit.
 
+### Multi-Device (`config/devices.yaml`)
+
+If you have multiple E3 devices on the same CAN bus (e.g. Vitocal heat pump + Vitodens gas boiler), create a `devices.yaml`:
+
+```yaml
+# config/devices.yaml
+devices:
+  - name: vitocal
+    ecu: "680"          # default Vitocal address
+    profile: vitocal
+
+  - name: vitodens
+    ecu: "690"          # Vitodens address
+    profile: vitodens
+```
+
+Then start the bridge with `--devices`:
+
+```bash
+open3e-bridge --devices config/devices.yaml --mqtt-host mqtt.local
+```
+
+Each device gets its own profile (common + device-specific DIDs), and all entities are grouped by ECU address in Home Assistant. Without `--devices`, the bridge runs in single-device mode (backward compatible).
+
+See `config/devices.yaml.example` for a template.
+
 ## CLI Reference
 
 ```
@@ -289,6 +315,7 @@ Options:
   --dump-entities         Show configured entities and exit (no MQTT needed)
   --no-auto-discover      Disable auto-discovery (enabled by default)
   --profile PROFILE       Device profile: auto, vitocal, vitodens, common (default: auto)
+  --devices PATH          Multi-device config (see config/devices.yaml.example)
   --diagnostics-interval N  Publish diagnostics every N seconds (0=disabled)
   --log-level LEVEL       DEBUG, INFO, WARNING, ERROR (default: INFO)
   --discovery-prefix PFX  Custom MQTT discovery prefix (default: homeassistant)

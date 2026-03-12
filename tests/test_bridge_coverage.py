@@ -111,14 +111,29 @@ def test_republish_sends_all(mock_bridge):
 
 
 # --- main() paths ---
+def _mock_registry(validate_result=None):
+    """Helper: create a mock DeviceRegistry with a mock generator."""
+    mock_gen = MagicMock()
+    mock_gen.auto_discovered_count = 0
+    mock_gen.datapoints = {}
+    mock_gen.discovery_prefix = "homeassistant"
+    if validate_result is not None:
+        mock_gen.validate.return_value = validate_result
+    mock_reg = MagicMock()
+    mock_reg.get_default_generator.return_value = mock_gen
+    mock_reg.generators = {"680": mock_gen}
+    mock_reg.ecu_addresses = ["680"]
+    mock_reg.devices = {}
+    mock_reg.get_generator.return_value = mock_gen
+    return mock_reg
+
+
 def test_main_validate_config():
     from bridge import main
-    with patch("bridge.get_generator_class") as mock_get_gen, \
+    mock_reg = _mock_registry({"errors": [], "warnings": []})
+    with patch("bridge.DeviceRegistry.from_single_device", return_value=mock_reg), \
+         patch("bridge.mqtt.Client"), \
          patch("sys.argv", ["bridge", "--validate-config"]):
-        mock_gen_cls = MagicMock()
-        mock_gen_cls.return_value.validate.return_value = {"errors": [], "warnings": []}
-        mock_gen_cls.return_value.auto_discovered_count = 0
-        mock_get_gen.return_value = mock_gen_cls
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 0
@@ -126,12 +141,10 @@ def test_main_validate_config():
 
 def test_main_validate_config_fail():
     from bridge import main
-    with patch("bridge.get_generator_class") as mock_get_gen, \
+    mock_reg = _mock_registry({"errors": ["bad"], "warnings": []})
+    with patch("bridge.DeviceRegistry.from_single_device", return_value=mock_reg), \
+         patch("bridge.mqtt.Client"), \
          patch("sys.argv", ["bridge", "--validate-config"]):
-        mock_gen_cls = MagicMock()
-        mock_gen_cls.return_value.validate.return_value = {"errors": ["bad"], "warnings": []}
-        mock_gen_cls.return_value.auto_discovered_count = 0
-        mock_get_gen.return_value = mock_gen_cls
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1
@@ -139,12 +152,7 @@ def test_main_validate_config_fail():
 
 def test_main_cleanup():
     from bridge import main
-    with patch("bridge.get_generator_class") as mock_get_gen, \
-         patch("sys.argv", ["bridge", "--cleanup"]):
-        mock_gen_cls = MagicMock()
-        mock_gen_cls.return_value.auto_discovered_count = 0
-        mock_gen_cls.return_value.discovery_prefix = "homeassistant"
-        mock_get_gen.return_value = mock_gen_cls
+    with patch("sys.argv", ["bridge", "--cleanup"]):
         with patch("bridge.Open3EBridge") as MockBridge:
             with pytest.raises(SystemExit) as exc_info:
                 main()

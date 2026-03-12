@@ -20,8 +20,8 @@ from pathlib import Path
 
 import paho.mqtt.client as mqtt
 
+from generators.devices import DeviceRegistry
 from generators.homeassistant import HomeAssistantGenerator  # noqa: F401 — used by tests
-from generators.registry import get_generator_class
 
 try:
     __version__ = pkg_version("open3e-bridge")
@@ -40,7 +40,8 @@ class Open3EBridge:
                  diagnostics_interval: int = 0,
                  auto_discover: bool = True,
                  generator_type: str = "homeassistant",
-                 profile: str = "auto"):
+                 profile: str = "auto",
+                 devices_config: str | None = None):
 
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
@@ -66,14 +67,32 @@ class Open3EBridge:
         # ROB-02: Reconnect with exponential backoff
         self.client.reconnect_delay_set(min_delay=1, max_delay=120)
 
-        # Generator — use registry to select generator type
+        # Device registry — multi-device or single-device mode
         resolved_config_dir = config_dir or str(Path(__file__).parent / "config")
-        generator_cls = get_generator_class(generator_type)
-        self.generator = generator_cls(
-            resolved_config_dir, language,
-            discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix,
-            auto_discover=auto_discover, profile=profile,
-        )
+        if devices_config:
+            self.device_registry = DeviceRegistry.from_yaml(
+                devices_config,
+                generator_type=generator_type,
+                config_dir=resolved_config_dir,
+                language=language,
+                discovery_prefix=discovery_prefix,
+                add_test_prefix=add_test_prefix,
+                auto_discover=auto_discover,
+            )
+            logger.info("Multi-device mode: %d devices", len(self.device_registry.ecu_addresses))
+        else:
+            self.device_registry = DeviceRegistry.from_single_device(
+                generator_type=generator_type,
+                config_dir=resolved_config_dir,
+                language=language,
+                discovery_prefix=discovery_prefix,
+                add_test_prefix=add_test_prefix,
+                auto_discover=auto_discover,
+                profile=profile,
+            )
+
+        # Backward compat: self.generator points to the default (first) generator
+        self.generator = self.device_registry.get_default_generator()
 
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
         self.published_configs: dict[str, str] = {}
@@ -471,8 +490,15 @@ class Open3EBridge:
             # A01: Write verification check
             self._check_write_verification(ecu_addr, did, payload)
 
+        # Multi-device: route to correct generator based on ECU address
+        generator = self.generator  # default
+        if parsed:
+            device_gen = self.device_registry.get_generator(parsed['ecu_addr'])
+            if device_gen:
+                generator = device_gen
+
         # Generiere Discovery Messages
-        discovery_messages = self.generator.generate_discovery_message(
+        discovery_messages = generator.generate_discovery_message(
             topic, payload, self.test_mode
         )
 
@@ -510,17 +536,20 @@ class Open3EBridge:
     def get_diagnostics(self) -> dict[str, object]:
         """Return bridge diagnostics as a dict (for monitoring / health checks)."""
         uptime = time.monotonic() - self._start_time
-        return {
+        total_auto = sum(g.auto_discovered_count for g in self.device_registry.generators.values())
+        diag: dict[str, object] = {
             "version": __version__,
             "uptime_s": round(uptime, 1),
             "messages_processed": self._messages_processed,
             "discovery_published": self._discovery_published,
             "entities_cached": len(self.published_configs),
             "entity_types": dict(self._entity_types),
-            "auto_discovered_entities": self.generator.auto_discovered_count,
+            "auto_discovered_entities": total_auto,
             "failed_writes": self._failed_writes,
             "last_error": self._last_error or "none",
+            "devices": len(self.device_registry.ecu_addresses),
         }
+        return diag
 
     def log_entity_summary(self):
         """Log a summary of discovered entity types."""
@@ -531,22 +560,26 @@ class Open3EBridge:
 
     def dump_entities(self):
         """Print all configured entities to stdout (no MQTT connection needed)."""
-        datapoints = self.generator.datapoints.get("datapoints", {}) or {}
         type_counter: Counter = Counter()
-        print(f"{'DID':<6} {'Type':<25} {'Name':<40} {'Device':<12} {'Subs'}")
-        print("-" * 100)
-        for did_str, dp in sorted(datapoints.items(), key=lambda x: int(x[0])):
-            dp_type = dp.get("type", "?")
-            name = self.generator.translate_name(dp.get("name", "?"))
-            device = dp.get("device", "-")
-            subs = dp.get("subs", {})
-            sub_keys = ", ".join(subs.keys()) if subs else "(all)"
-            # Determine HA entity type from type template
-            template = self.generator.type_templates.get(dp_type, {})
-            ha_type = template.get("component", dp_type)
-            type_counter[ha_type] += 1
-            print(f"{did_str:<6} {dp_type:<25} {name:<40} {device:<12} {sub_keys}")
-        print("-" * 100)
+        for ecu_addr, gen in self.device_registry.generators.items():
+            dev_cfg = self.device_registry.devices.get(ecu_addr)
+            dev_name = dev_cfg.name if dev_cfg else ecu_addr
+            if len(self.device_registry.ecu_addresses) > 1:
+                print(f"\n=== Device: {dev_name} (ECU {ecu_addr}) ===")
+            datapoints = gen.datapoints.get("datapoints", {}) or {}
+            print(f"{'DID':<6} {'Type':<25} {'Name':<40} {'Device':<12} {'Subs'}")
+            print("-" * 100)
+            for did_str, dp in sorted(datapoints.items(), key=lambda x: int(x[0])):
+                dp_type = dp.get("type", "?")
+                name = gen.translate_name(dp.get("name", "?"))
+                device = dp.get("device", "-")
+                subs = dp.get("subs", {})
+                sub_keys = ", ".join(subs.keys()) if subs else "(all)"
+                template = gen.type_templates.get(dp_type, {})
+                ha_type = template.get("component", dp_type)
+                type_counter[ha_type] += 1
+                print(f"{did_str:<6} {dp_type:<25} {name:<40} {device:<12} {sub_keys}")
+            print("-" * 100)
         total = sum(type_counter.values())
         summary = ", ".join(f"{c} {t}" for t, c in sorted(type_counter.items()))
         print(f"Total: {total} entities ({summary})")
@@ -582,6 +615,8 @@ def main():
                         help="Generator type (default: homeassistant). Use 'open3e-bridge --list-generators' to see available types")
     parser.add_argument("--list-generators", action="store_true",
                         help="List available generator types and exit")
+    parser.add_argument("--devices", default=None,
+                        help="Path to devices.yaml for multi-device mode (see config/devices.yaml.example)")
     parser.add_argument("--diagnostics-interval", type=int, default=0,
                         help="Publish diagnostics every N seconds to open3e/bridge/diagnostics (0=disabled)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -629,6 +664,7 @@ def main():
         auto_discover=not args.no_auto_discover,
         generator_type=args.generator,
         profile=args.profile,
+        devices_config=args.devices,
     )
 
     # Validate-only mode

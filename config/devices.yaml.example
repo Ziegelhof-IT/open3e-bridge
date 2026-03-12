@@ -1,0 +1,22 @@
+# Multi-device configuration for open3e-bridge
+#
+# Copy this file to devices.yaml and adjust for your setup.
+# Each device gets its own profile, so DIDs are resolved per-device.
+#
+# Usage: open3e-bridge --devices config/devices.yaml
+#
+# Without --devices, the bridge runs in single-device mode (ECU 680, --profile).
+
+devices:
+  - name: vitocal
+    ecu: "680"          # default Vitocal address
+    profile: vitocal
+
+  - name: vitodens
+    ecu: "690"          # example Vitodens address
+    profile: vitodens
+
+  # Add more devices as needed:
+  # - name: vx3
+  #   ecu: "6A0"
+  #   profile: common
