@@ -15,6 +15,30 @@ This bridge does **not** replace ViCare. It adds local control via Home Assistan
 
 > **Not a Viessmann user?** Vaillant devices (aroTHERM, ecoTEC) use the eBUS protocol, not CAN/UDS — open3e does not support them. See [ebusd](https://github.com/john30/ebusd) for local eBUS access or [mypyllant-component](https://github.com/signalkraft/mypyllant-component) for Vaillant cloud integration with Home Assistant.
 
+## Getting Started — Overview
+
+**Time estimate:** Allow roughly 2 hours for the complete setup (hardware + software).
+
+**What you need:**
+
+| Item | Cost | Notes |
+|------|------|-------|
+| USB-CAN adapter | ~20 EUR | USBtin, CANable, or Waveshare USB-CAN-A |
+| CAN cable | ~5 EUR | 2-wire (CAN-H, CAN-L), connect to heat pump's internal CAN bus |
+| Raspberry Pi or Linux PC | existing | Near the heat pump, for running open3e |
+| MQTT broker | free | Mosquitto (HA add-on or standalone) |
+| Home Assistant | existing | With MQTT integration enabled |
+
+**Step-by-step overview:**
+
+1. **Wire the CAN adapter** (~30 min) — Connect USB-CAN adapter to heat pump's CAN bus. See [CAN Bus Guide](docs/CAN_BUS_GUIDE.md) for pinout and photos.
+2. **Install & test open3e** (~30 min) — Install on RPi, verify you can read DIDs: `open3e -r 274` should return the outside temperature.
+3. **Start open3e in MQTT mode** (~10 min) — `open3e @args.txt -m -h <broker-ip>`. Verify with `mosquitto_sub -h <broker-ip> -t "open3e/#" -v`.
+4. **Install open3e-bridge** (~10 min) — `pip install open3e-bridge` and start: `open3e-bridge --mqtt-host <broker-ip> --language de`.
+5. **Check Home Assistant** (~10 min) — Entities appear under Settings > Devices & Services > MQTT. Done!
+
+**German language support:** Use `--language de` to get German entity names (Vorlauftemperatur, Warmwasser, Heizkreis 1 Betriebsmodus, etc.).
+
 ## Prerequisites
 
 You need 3 things running before installing this bridge:
