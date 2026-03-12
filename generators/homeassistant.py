@@ -131,8 +131,13 @@ class HomeAssistantGenerator(BaseGenerator):
             if sub_config.get('enabled', True):  # Default: enabled
                 # Sub-specific config: suffix for display name
                 suffix_key = sub_config.get('suffix', sub_item)
-                translated_suffix = self.translate_suffix(suffix_key)
-                sub_name = f"{base_name} {translated_suffix}" if translated_suffix else base_name
+                if suffix_key == "":
+                    # No suffix — use sub-item name directly (e.g. Comfort/Standard/Reduced)
+                    translated_sub = self.translate_sub_item(sub_item)
+                    sub_name = f"{base_name} {translated_sub}"
+                else:
+                    translated_suffix = self.translate_suffix(suffix_key)
+                    sub_name = f"{base_name} {translated_suffix}" if translated_suffix else base_name
                 sub_name = self.resolve_name(did, sub_item, sub_name)
 
                 entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
@@ -241,13 +246,16 @@ class HomeAssistantGenerator(BaseGenerator):
         }
 
         # Mode topics/templates
-        config['modes'] = climate_cfg.get('modes', ['off', 'auto'])
+        raw_modes = climate_cfg.get('modes', ['off', 'auto'])
+        config['modes'] = self.translate_modes(raw_modes)
         config['mode_state_topic'] = f"open3e/{ecu_addr}_{did}_{sensor_name}/Mode/ID"
         config['mode_command_topic'] = 'open3e/cmnd'
         if 'mode_state_template' in climate_cfg:
-            config['mode_state_template'] = climate_cfg['mode_state_template']
+            config['mode_state_template'] = self._translate_mode_state_template(
+                climate_cfg['mode_state_template'])
         if 'mode_command_template' in climate_cfg:
-            config['mode_command_template'] = climate_cfg['mode_command_template']
+            config['mode_command_template'] = self._translate_command_template_keys(
+                climate_cfg['mode_command_template'])
 
         # Temperature topics/templates
         if temp_did and temp_did_name:
@@ -309,14 +317,17 @@ class HomeAssistantGenerator(BaseGenerator):
             config['temperature_command_template'] = wh_cfg['temperature_command_template']
 
         # Mode (e.g. DID 531)
-        config['modes'] = wh_cfg.get('modes', ['off', 'eco', 'performance'])
+        raw_modes = wh_cfg.get('modes', ['off', 'eco', 'performance'])
+        config['modes'] = self.translate_modes(raw_modes)
         sensor_name = parsed.get('sensor_name', '')
         config['mode_state_topic'] = f"open3e/{ecu_addr}_{did}_{sensor_name}"
         config['mode_command_topic'] = 'open3e/cmnd'
         if 'mode_state_template' in wh_cfg:
-            config['mode_state_template'] = wh_cfg['mode_state_template']
+            config['mode_state_template'] = self._translate_mode_state_template(
+                wh_cfg['mode_state_template'])
         if 'mode_command_template' in wh_cfg:
-            config['mode_command_template'] = wh_cfg['mode_command_template']
+            config['mode_command_template'] = self._translate_command_template_keys(
+                wh_cfg['mode_command_template'])
 
         # Temperature ranges
         for key in ['min_temp', 'max_temp', 'precision', 'temperature_unit']:
@@ -324,6 +335,26 @@ class HomeAssistantGenerator(BaseGenerator):
                 config[key] = wh_cfg[key]
 
         return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
+
+    def _translate_mode_state_template(self, template: str) -> str:
+        """Replace English mode outputs in mode_state_template with translated values."""
+        modes_map = self.translations.get("modes", {}) if hasattr(self, 'translations') else {}
+        result = template
+        for en_key, de_key in modes_map.items():
+            # Replace Jinja2 output like %}off{% or %}heat{%
+            result = result.replace("%}" + en_key + "{%", "%}" + de_key + "{%")
+            # Also handle end-of-line: %}off\n
+            result = result.replace("%}" + en_key + "\n", "%}" + de_key + "\n")
+        return result
+
+    def _translate_command_template_keys(self, template: str) -> str:
+        """Replace English mode keys in command_template Jinja2 dict literals with translated keys."""
+        modes_map = self.translations.get("modes", {}) if hasattr(self, 'translations') else {}
+        result = template
+        for en_key, de_key in modes_map.items():
+            # Replace dict keys like 'off': with 'Aus':
+            result = result.replace(f"'{en_key}':", f"'{de_key}':")
+        return result
 
     def _build_discovery_topic(self, entity_type: str, entity_id: str, test_mode: bool) -> str:
         """Baut Discovery Topic zusammen"""
@@ -372,6 +403,14 @@ class HomeAssistantGenerator(BaseGenerator):
             "sw_version": _SW_VERSION,
             "support_url": "https://github.com/open3e/open3e-bridge",
         }
+
+        # Translate mode options for select entities
+        if 'options' in config and isinstance(config['options'], list):
+            config['options'] = self.translate_modes(config['options'])
+            # Also translate command_template keys to match translated option names
+            if 'command_template' in config and self.language != "en":
+                config['command_template'] = self._translate_command_template_keys(
+                    config['command_template'])
 
         # Schreibbare Entities (skip if write-blacklisted)
         if (dp_config.get('writable') or template.get('writable')) and not self.is_write_blacklisted(did):

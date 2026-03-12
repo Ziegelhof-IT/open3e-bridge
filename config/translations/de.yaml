@@ -83,6 +83,24 @@ names:
   "Eco Heating Limit": "Eco Heizgrenze"
   "Eco Cooling Limit": "Eco Kuehlgrenze"
 
+modes:
+  "off": "Aus"
+  "heat": "Heizen"
+  "cool": "Kuehlen"
+  "auto": "Automatik"
+  "eco": "Eco"
+  "performance": "Leistung"
+
+sub_items:
+  "Comfort": "Komfort"
+  "Standard": "Standard"
+  "Reduced": "Reduziert"
+  "Increased": "Erhoeht"
+  "Duration": "Dauer"
+
+schedule_strings:
+  "inactive": "Inaktiv"
+
 suffixes:
   "current": "Aktuell"
   "min": "Minimum"
@@ -90,6 +108,9 @@ suffixes:
   "avg": "Durchschnitt"
   "unknown": "Unbekannt"
   "error": "Fehler"
+  "setpoint": "Sollwert"
+  "hours": "Stunden"
+  "starts": "Starts"
 
 devices:
   "Vitocal 250-A Outdoor Unit": "Vitocal 250-A Ausseneinheit"
@@ -108,6 +129,33 @@ strings:
   "suggested_area": "Heizung"
 
 value_templates:
+  257: >
+    {% set data = value_json if value_json is mapping else {} %}
+    {% set count = data.get('Count', 0) | int(0) %}
+    {% if count == 0 %}Keine Fehler{% else %}{{ count }} aktiv{% endif %}
+  265: >
+    {% set data = value_json if value_json is mapping else {} %}
+    {% set count = data.get('Count', 0) | int(0) %}
+    {% if count == 0 %}Keine Fehler{% else %}{{ count }} aktiv{% endif %}
+  # Schedule DIDs — German overlay (inactive → Inaktiv)
+  691: &schedule_de >
+    {% set data = value_json if value_json is mapping else {} %}
+    {% set s = data.get('Schedules', []) %}
+    {% if s | length == 0 %}Inaktiv
+    {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  692: *schedule_de
+  693: *schedule_de
+  694: *schedule_de
+  695: *schedule_de
+  696: *schedule_de
+  697: *schedule_de
+  761: *schedule_de
+  762: *schedule_de
+  763: *schedule_de
+  764: *schedule_de
+  765: *schedule_de
+  766: *schedule_de
+  767: *schedule_de
   2335: >
     {% set state = value | int %}
     {% if state == 0 %}Heizen

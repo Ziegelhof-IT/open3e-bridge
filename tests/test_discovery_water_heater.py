@@ -36,7 +36,7 @@ class TestWaterHeaterDiscovery:
         )
         wh_results = [(t, p) for t, p in results if "water_heater" in t]
         config = json.loads(wh_results[0][1])
-        assert config["modes"] == ["off", "eco", "performance"]
+        assert config["modes"] == ["Aus", "Eco", "Leistung"]
 
     def test_water_heater_temperature_range(self, generator_de):
         results = generator_de.generate_discovery_message(

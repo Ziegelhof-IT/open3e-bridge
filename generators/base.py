@@ -67,6 +67,22 @@ class BaseGenerator:
         return self.translations.get("suffixes", {}).get(
             suffix_key, _EN_SUFFIXES.get(suffix_key, suffix_key))
 
+    def translate_mode(self, mode_key: str) -> str:
+        """Translate mode option (off/heat/cool/auto/eco/performance). EN: passthrough."""
+        if self.language == "en":
+            return mode_key
+        return self.translations.get("modes", {}).get(mode_key, mode_key)
+
+    def translate_modes(self, modes: list[str]) -> list[str]:
+        """Translate a list of mode options."""
+        return [self.translate_mode(m) for m in modes]
+
+    def translate_sub_item(self, sub_item: str) -> str:
+        """Translate sub-item name (Comfort/Standard/Reduced). EN: passthrough."""
+        if self.language == "en":
+            return sub_item
+        return self.translations.get("sub_items", {}).get(sub_item, sub_item)
+
     def translate_string(self, key: str, fallback: str | None = None) -> str:
         """Translate misc strings (suggested_area). EN: fallback, other: overlay."""
         if self.language == "en":
