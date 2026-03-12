@@ -31,6 +31,18 @@ def generator_en():
 
 
 @pytest.fixture
+def generator_auto():
+    """English HomeAssistantGenerator with auto-discover enabled."""
+    return HomeAssistantGenerator(
+        config_dir=CONFIG_DIR,
+        language="en",
+        discovery_prefix="homeassistant",
+        add_test_prefix=False,
+        auto_discover=True,
+    )
+
+
+@pytest.fixture
 def config_dir():
     """Path to config directory."""
     return CONFIG_DIR

@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from .base import BaseGenerator
+from .heuristics import infer_entity_config
 
 try:
     from importlib.metadata import PackageNotFoundError
@@ -28,10 +29,12 @@ _STATELESS_ENTITY_TYPES = frozenset({"button"})
 
 
 class HomeAssistantGenerator(BaseGenerator):
-    def __init__(self, config_dir: str = "config", language: str = "en", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True):
+    def __init__(self, config_dir: str = "config", language: str = "en", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True, auto_discover: bool = False):
         super().__init__(config_dir=config_dir, language=language)
         self.discovery_prefix = discovery_prefix
         self.add_test_prefix = add_test_prefix
+        self.auto_discover = auto_discover
+        self.auto_discovered_count = 0
 
     def generate_discovery_message(self, topic: str, value: str, test_mode: bool = True) -> list[tuple[str, str]]:
         """
@@ -57,9 +60,11 @@ class HomeAssistantGenerator(BaseGenerator):
         # Hole Datenpunkt-Konfiguration
         dp_config = self.get_datapoint_config(did)
         if not dp_config:
-            # KEINE Fallback Discovery für unbekannte DIDs
-            logger.debug("Skipping unknown DID %d (not configured)", did)
-            return []
+            if not self.auto_discover:
+                logger.debug("Skipping unknown DID %d (not configured)", did)
+                return []
+            # Tier 1: Heuristic auto-discovery fallback
+            return self._generate_heuristic_discovery(parsed, test_mode)
 
         # Generiere Discovery Messages basierend auf Typ
         results = self._generate_typed_discovery(parsed, dp_config, value, test_mode)
@@ -146,6 +151,60 @@ class HomeAssistantGenerator(BaseGenerator):
                 results.append((discovery_topic, json.dumps(config, ensure_ascii=False)))
 
         return results
+
+    def _generate_heuristic_discovery(self, parsed: dict[str, Any], test_mode: bool) -> list[tuple[str, str]]:
+        """Tier 1: Generate discovery from heuristic inference for unknown DIDs."""
+        ecu_addr = parsed['ecu_addr']
+        did = parsed['did']
+        sensor_name = parsed['sensor_name']
+        sub_item = parsed.get('sub_item')
+
+        hint = infer_entity_config(sensor_name, sub_item)
+        entity_type = hint.entity_type
+
+        entity_id = self.generate_entity_id(ecu_addr, did, sub_item)
+        unique_id = self.generate_unique_id(ecu_addr, did, sub_item)
+
+        # Name: "DID {did} {sensor_name}" (not translated, heuristic entity)
+        name = f"DID {did} {sensor_name}"
+        if sub_item:
+            name = f"{name} {sub_item}"
+
+        discovery_topic = self._build_discovery_topic(entity_type, entity_id, test_mode)
+
+        config: dict[str, Any] = {
+            "name": name,
+            "unique_id": unique_id,
+            "object_id": entity_id,
+            "device": self.create_device_info(ecu_addr),
+            "availability_topic": "open3e/LWT",
+            "payload_available": "online",
+            "payload_not_available": "offline",
+        }
+
+        if entity_type not in _STATELESS_ENTITY_TYPES:
+            config["state_topic"] = parsed['full_topic']
+
+        # Apply heuristic hints
+        if hint.device_class:
+            config["device_class"] = hint.device_class
+        if hint.unit:
+            config["unit_of_measurement"] = hint.unit
+        if hint.state_class:
+            config["state_class"] = hint.state_class
+        if hint.icon:
+            config["icon"] = hint.icon
+
+        config["origin"] = {
+            "name": "Open3E Bridge",
+            "sw_version": _SW_VERSION,
+            "support_url": "https://github.com/open3e/open3e-bridge",
+        }
+
+        self.auto_discovered_count += 1
+        logger.info("Auto-discovered DID %d (%s) as %s", did, sensor_name, entity_type)
+
+        return [(discovery_topic, json.dumps(config, ensure_ascii=False))]
 
     def _generate_climate_discovery(self, parsed: dict[str, Any], climate_cfg: dict[str, Any], test_mode: bool) -> list[tuple[str, str]]:
         ecu_addr = parsed['ecu_addr']

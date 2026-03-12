@@ -36,7 +36,8 @@ class Open3EBridge:
                  discovery_prefix: str = "homeassistant",
                  add_test_prefix: bool = True,
                  config_dir: str | None = None,
-                 diagnostics_interval: int = 0):
+                 diagnostics_interval: int = 0,
+                 auto_discover: bool = False):
 
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
@@ -66,7 +67,8 @@ class Open3EBridge:
         resolved_config_dir = config_dir or str(Path(__file__).parent / "config")
         self.generator = HomeAssistantGenerator(
             resolved_config_dir, language,
-            discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix
+            discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix,
+            auto_discover=auto_discover,
         )
 
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
@@ -100,9 +102,9 @@ class Open3EBridge:
             "0x33": "SecurityAccessDenied",
         }
 
-        logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s",
+        logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s auto_discover=%s",
                     __version__, mqtt_host, mqtt_port, language, resolved_config_dir,
-                    self.generator.discovery_prefix)
+                    self.generator.discovery_prefix, auto_discover)
 
     def _schedule_diagnostics(self):
         """Schedule the next periodic diagnostics publish."""
@@ -423,6 +425,7 @@ class Open3EBridge:
             "discovery_published": self._discovery_published,
             "entities_cached": len(self.published_configs),
             "entity_types": dict(self._entity_types),
+            "auto_discovered_entities": self.generator.auto_discovered_count,
         }
 
     def log_entity_summary(self):
@@ -477,6 +480,8 @@ def main():
     parser.add_argument("--cleanup", action="store_true", help="Cleanup retained discovery for open3e entities")
     parser.add_argument("--validate-config", action="store_true", help="Validate datapoints/templates and exit")
     parser.add_argument("--dump-entities", action="store_true", help="Show configured entities and exit (no MQTT needed)")
+    parser.add_argument("--auto-discover", action="store_true",
+                        help="Enable heuristic auto-discovery for DIDs not in datapoints.yaml")
     parser.add_argument("--diagnostics-interval", type=int, default=0,
                         help="Publish diagnostics every N seconds to open3e/bridge/diagnostics (0=disabled)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -514,6 +519,7 @@ def main():
         add_test_prefix=not args.no_test_prefix,
         config_dir=args.config_dir,
         diagnostics_interval=args.diagnostics_interval,
+        auto_discover=args.auto_discover,
     )
 
     # Validate-only mode
