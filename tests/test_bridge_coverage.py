@@ -73,12 +73,22 @@ def test_on_message_bridge_lwt_skipped(mock_bridge):
     mock_client.publish.assert_not_called()
 
 
-def test_on_message_unknown_did_no_publish(mock_bridge):
-    """Unknown DID (not in config) produces no discovery publish."""
+def test_on_message_unknown_did_no_publish_without_auto_discover(mock_bridge):
+    """Unknown DID (not in config) produces no discovery publish when auto-discover is off."""
     bridge, mock_client = mock_bridge
+    bridge.generator.auto_discover = False
     msg = FakeMessage("open3e/680_99999_Unknown/Value", "not-json")
     bridge._on_message(mock_client, None, msg)
     mock_client.publish.assert_not_called()
+
+
+def test_on_message_unknown_did_auto_discovers_by_default(mock_bridge):
+    """Unknown DID auto-discovers by default (auto_discover=True)."""
+    bridge, mock_client = mock_bridge
+    msg = FakeMessage("open3e/680_99999_Unknown/Value", "42")
+    bridge._on_message(mock_client, None, msg)
+    # Should have published a heuristic discovery
+    assert mock_client.publish.called
 
 
 # --- _republish_all_discovery ---
@@ -103,9 +113,12 @@ def test_republish_sends_all(mock_bridge):
 # --- main() paths ---
 def test_main_validate_config():
     from bridge import main
-    with patch("bridge.HomeAssistantGenerator") as MockGen, \
+    with patch("bridge.get_generator_class") as mock_get_gen, \
          patch("sys.argv", ["bridge", "--validate-config"]):
-        MockGen.return_value.validate.return_value = {"errors": [], "warnings": []}
+        mock_gen_cls = MagicMock()
+        mock_gen_cls.return_value.validate.return_value = {"errors": [], "warnings": []}
+        mock_gen_cls.return_value.auto_discovered_count = 0
+        mock_get_gen.return_value = mock_gen_cls
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 0
@@ -113,9 +126,12 @@ def test_main_validate_config():
 
 def test_main_validate_config_fail():
     from bridge import main
-    with patch("bridge.HomeAssistantGenerator") as MockGen, \
+    with patch("bridge.get_generator_class") as mock_get_gen, \
          patch("sys.argv", ["bridge", "--validate-config"]):
-        MockGen.return_value.validate.return_value = {"errors": ["bad"], "warnings": []}
+        mock_gen_cls = MagicMock()
+        mock_gen_cls.return_value.validate.return_value = {"errors": ["bad"], "warnings": []}
+        mock_gen_cls.return_value.auto_discovered_count = 0
+        mock_get_gen.return_value = mock_gen_cls
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1
@@ -123,12 +139,17 @@ def test_main_validate_config_fail():
 
 def test_main_cleanup():
     from bridge import main
-    with patch("bridge.Open3EBridge") as MockBridge, \
+    with patch("bridge.get_generator_class") as mock_get_gen, \
          patch("sys.argv", ["bridge", "--cleanup"]):
-        with pytest.raises(SystemExit) as exc_info:
-            main()
-        assert exc_info.value.code == 0
-        MockBridge.return_value.cleanup.assert_called_once()
+        mock_gen_cls = MagicMock()
+        mock_gen_cls.return_value.auto_discovered_count = 0
+        mock_gen_cls.return_value.discovery_prefix = "homeassistant"
+        mock_get_gen.return_value = mock_gen_cls
+        with patch("bridge.Open3EBridge") as MockBridge:
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+            MockBridge.return_value.cleanup.assert_called_once()
 
 
 # --- simulate_from_file ---

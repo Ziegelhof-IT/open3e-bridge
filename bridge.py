@@ -20,7 +20,8 @@ from pathlib import Path
 
 import paho.mqtt.client as mqtt
 
-from generators.homeassistant import HomeAssistantGenerator
+from generators.homeassistant import HomeAssistantGenerator  # noqa: F401 — used by tests
+from generators.registry import get_generator_class
 
 try:
     __version__ = pkg_version("open3e-bridge")
@@ -37,7 +38,9 @@ class Open3EBridge:
                  add_test_prefix: bool = True,
                  config_dir: str | None = None,
                  diagnostics_interval: int = 0,
-                 auto_discover: bool = False):
+                 auto_discover: bool = True,
+                 generator_type: str = "homeassistant",
+                 profile: str = "auto"):
 
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
@@ -63,12 +66,13 @@ class Open3EBridge:
         # ROB-02: Reconnect with exponential backoff
         self.client.reconnect_delay_set(min_delay=1, max_delay=120)
 
-        # Generator — use user-specified config_dir or default bundled config
+        # Generator — use registry to select generator type
         resolved_config_dir = config_dir or str(Path(__file__).parent / "config")
-        self.generator = HomeAssistantGenerator(
+        generator_cls = get_generator_class(generator_type)
+        self.generator = generator_cls(
             resolved_config_dir, language,
             discovery_prefix=discovery_prefix, add_test_prefix=add_test_prefix,
-            auto_discover=auto_discover,
+            auto_discover=auto_discover, profile=profile,
         )
 
         # Cache veröffentlichter Discovery-Konfigurationen (Topic -> Payload)
@@ -79,11 +83,17 @@ class Open3EBridge:
         self._messages_processed = 0
         self._discovery_published = 0
         self._entity_types: Counter = Counter()
+        self._failed_writes = 0
+        self._last_error: str = ""
 
         # Periodic diagnostics publishing
         self._diagnostics_interval = diagnostics_interval
         self._diagnostics_topic = "open3e/bridge/diagnostics"
         self._diagnostics_timer: threading.Timer | None = None
+
+        # Health entity
+        self._health_topic = "open3e/bridge/health"
+        self._health_attributes_topic = "open3e/bridge/health/attributes"
 
         # A01: Write verification — pending writes awaiting read-back
         # Key: (ecu_addr, did) → expected value (str)
@@ -96,15 +106,15 @@ class Open3EBridge:
 
         # A09: NRC code mapping for human-readable logging
         self._nrc_codes: dict[str, str] = {
-            "0x22": "ConditionsNotCorrect",
-            "0x31": "RequestOutOfRange",
-            "0x14": "ResponseTooLong",
-            "0x33": "SecurityAccessDenied",
+            "0x22": "ConditionsNotCorrect — device rejected (wrong mode/state)",
+            "0x31": "RequestOutOfRange — value outside allowed range",
+            "0x14": "ResponseTooLong — response data too large",
+            "0x33": "SecurityAccessDenied — authentication required",
         }
 
-        logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s auto_discover=%s",
+        logger.info("Open3E Bridge v%s initialized: MQTT=%s:%d lang=%s config=%s prefix=%s generator=%s auto_discover=%s",
                     __version__, mqtt_host, mqtt_port, language, resolved_config_dir,
-                    self.generator.discovery_prefix, auto_discover)
+                    self.generator.discovery_prefix, generator_type, auto_discover)
 
     def _schedule_diagnostics(self):
         """Schedule the next periodic diagnostics publish."""
@@ -209,9 +219,22 @@ class Open3EBridge:
             logger.debug("Subscribed to open3e topics and homeassistant/status")
             # A08: Publish COP sensor discovery
             self._publish_cop_discovery()
+            # Publish health entity discovery
+            self._publish_health_discovery()
+            self._publish_health_state("ON")
             self._schedule_diagnostics()
         else:
-            logger.error("Failed to connect to MQTT broker: %s", reason_code)
+            reason_hints = {
+                1: "incorrect protocol version",
+                2: "invalid client identifier",
+                3: "server unavailable",
+                4: "bad username or password — check --mqtt-user and --mqtt-password (or MQTT_PASSWORD env var)",
+                5: "not authorized — check MQTT broker ACL configuration",
+            }
+            hint = reason_hints.get(int(reason_code) if isinstance(reason_code, int) else 0, "")
+            extra = f" ({hint})" if hint else ""
+            logger.error("Failed to connect to MQTT broker at %s:%d: rc=%s%s",
+                         self.mqtt_host, self.mqtt_port, reason_code, extra)
 
     def _republish_all_discovery(self):
         """ROB-01: Re-publish all cached discovery configs (e.g. after HA restart)."""
@@ -252,10 +275,13 @@ class Open3EBridge:
         if expected is None:
             return
         if str(actual_value).strip() != str(expected).strip():
-            logger.warning(
-                "Write verification FAILED for DID %d: expected=%s, actual=%s",
-                did, expected, actual_value,
-            )
+            self._failed_writes += 1
+            msg = (f"Write verification FAILED for DID {did}: expected={expected}, actual={actual_value}. "
+                   f"The controller may have rejected the value (out of range or wrong mode). "
+                   f"Check if the value is within allowed limits.")
+            self._last_error = msg
+            logger.warning(msg)
+            self._publish_health_state("ON", error=msg)
         else:
             logger.info("Write verification OK for DID %d: %s", did, actual_value)
 
@@ -319,6 +345,67 @@ class Open3EBridge:
                          cop, self._thermal_power, self._electrical_power)
 
     # ------------------------------------------------------------------
+    # Health entity (binary_sensor with diagnostic attributes)
+    # ------------------------------------------------------------------
+
+    def _publish_health_discovery(self):
+        """Publish HA MQTT Discovery for bridge health binary_sensor (entity_category: diagnostic)."""
+        prefix = self.discovery_prefix or "homeassistant"
+        if self.add_test_prefix and self.test_mode and not prefix.startswith("test/"):
+            prefix = f"test/{prefix}"
+        discovery_topic = f"{prefix}/binary_sensor/open3e_bridge_status/config"
+        config = {
+            "name": "Bridge Status",
+            "unique_id": "open3e_bridge_status",
+            "object_id": "open3e_bridge_status",
+            "state_topic": self._health_topic,
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "device_class": "connectivity",
+            "entity_category": "diagnostic",
+            "json_attributes_topic": self._health_attributes_topic,
+            "availability_topic": self.lwt_topic,
+            "payload_available": "online",
+            "payload_not_available": "offline",
+            "device": {
+                "identifiers": ["open3e_bridge"],
+                "name": "Open3E Bridge",
+                "manufacturer": "Open3E",
+            },
+            "origin": {
+                "name": "Open3E Bridge",
+                "sw_version": __version__,
+                "support_url": "https://github.com/open3e/open3e-bridge",
+            },
+        }
+        payload = json.dumps(config, ensure_ascii=False)
+        self.client.publish(discovery_topic, payload, retain=True)
+        self.published_configs[discovery_topic] = payload
+        logger.debug("Published health entity discovery: %s", discovery_topic)
+
+    def _publish_health_state(self, state: str = "ON", error: str | None = None):
+        """Publish health state and attributes to MQTT."""
+        try:
+            self.client.publish(self._health_topic, state, retain=True)
+            uptime = time.monotonic() - self._start_time
+            attributes = {
+                "version": __version__,
+                "uptime_s": round(uptime, 1),
+                "messages_processed": self._messages_processed,
+                "discovery_published": self._discovery_published,
+                "failed_writes": self._failed_writes,
+                "last_error": error or self._last_error or "none",
+                "entities_cached": len(self.published_configs),
+            }
+            self.client.publish(
+                self._health_attributes_topic,
+                json.dumps(attributes, ensure_ascii=False),
+                retain=True,
+            )
+        except Exception as e:
+            logger.debug("Failed to publish health state: %s", e)
+
+    # ------------------------------------------------------------------
     # A09: NRC handling
     # ------------------------------------------------------------------
 
@@ -339,10 +426,15 @@ class Open3EBridge:
         match = self._NRC_PATTERN.search(payload)
         if match:
             code = match.group(1)
-            meaning = self._nrc_codes.get(code, "Unknown NRC")
-            logger.warning("NRC on %s: %s (%s)", topic, code, meaning)
+            meaning = self._nrc_codes.get(code, f"Unknown NRC code {code}")
+            msg = f"NRC on {topic}: {code} ({meaning})"
+            logger.warning(msg)
+            self._last_error = msg
         else:
-            logger.warning("NRC on %s: %s", topic, payload.strip())
+            msg = f"NRC on {topic}: {payload.strip()}"
+            logger.warning(msg)
+            self._last_error = msg
+        self._publish_health_state("ON", error=self._last_error)
         return True
 
     # ------------------------------------------------------------------
@@ -426,6 +518,8 @@ class Open3EBridge:
             "entities_cached": len(self.published_configs),
             "entity_types": dict(self._entity_types),
             "auto_discovered_entities": self.generator.auto_discovered_count,
+            "failed_writes": self._failed_writes,
+            "last_error": self._last_error or "none",
         }
 
     def log_entity_summary(self):
@@ -480,8 +574,14 @@ def main():
     parser.add_argument("--cleanup", action="store_true", help="Cleanup retained discovery for open3e entities")
     parser.add_argument("--validate-config", action="store_true", help="Validate datapoints/templates and exit")
     parser.add_argument("--dump-entities", action="store_true", help="Show configured entities and exit (no MQTT needed)")
-    parser.add_argument("--auto-discover", action="store_true",
-                        help="Enable heuristic auto-discovery for DIDs not in datapoints.yaml")
+    parser.add_argument("--no-auto-discover", action="store_true",
+                        help="Disable heuristic auto-discovery for DIDs not in datapoints.yaml (auto-discover is ON by default)")
+    parser.add_argument("--profile", default="auto", choices=["auto", "vitocal", "vitodens", "common"],
+                        help="Device profile (default: auto). Determines which DIDs are configured.")
+    parser.add_argument("--generator", default="homeassistant",
+                        help="Generator type (default: homeassistant). Use 'open3e-bridge --list-generators' to see available types")
+    parser.add_argument("--list-generators", action="store_true",
+                        help="List available generator types and exit")
     parser.add_argument("--diagnostics-interval", type=int, default=0,
                         help="Publish diagnostics every N seconds to open3e/bridge/diagnostics (0=disabled)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -493,6 +593,13 @@ def main():
         level=getattr(logging, args.log_level),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
+
+    # List generators mode
+    if args.list_generators:
+        from generators.registry import list_generators
+        for name, desc in list_generators():
+            print(f"  {name:<20} {desc}")
+        raise SystemExit(0)
 
     # MQTT password: CLI arg takes precedence, then env var
     mqtt_password = args.mqtt_password or os.environ.get("MQTT_PASSWORD")
@@ -519,7 +626,9 @@ def main():
         add_test_prefix=not args.no_test_prefix,
         config_dir=args.config_dir,
         diagnostics_interval=args.diagnostics_interval,
-        auto_discover=args.auto_discover,
+        auto_discover=not args.no_auto_discover,
+        generator_type=args.generator,
+        profile=args.profile,
     )
 
     # Validate-only mode

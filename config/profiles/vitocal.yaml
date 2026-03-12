@@ -1,9 +1,7 @@
-# Open3E Datapoint Definitions
-# Community-maintained - edit directly
-# Schema version for future migration support
+# Vitocal profile — heat pump specific DIDs
+# Merges on top of common.yaml (vitocal entries win)
 schema_version: 1
 
-# Physical device definitions (DID → device mapping)
 devices:
   outdoor:
     name: "Vitocal 250-A Outdoor Unit"
@@ -25,42 +23,43 @@ devices:
     model: "PV/Grid"
 
 datapoints:
-  268:  # FlowTemperatureSensor
+  # --- Override common devices for Vitocal-specific grouping ---
+  268:
     type: "temperature_sensor"
     name: "Flow Temperature"
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
-  269:  # ReturnTemperatureSensor
+  269:
     type: "temperature_sensor"
     name: "Return Temperature"
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
-  274:  # OutsideTemperatureSensor
+  274:
     type: "temperature_sensor"
     name: "Outside Temperature"
     device: "outdoor"
     subs:
       Actual: { suffix: "current" }
 
-  318:  # WaterPressureSensor
+  318:
     type: "pressure_sensor"
     name: "Water Pressure"
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
-  381:  # CentralHeatingPump
+  381:
     type: "pump_sensor"
     name: "Internal Pump"
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
 
-  1043:  # AllengraSensor (Volume Flow)
+  1043:
     type: "generic_sensor"
     name: "Volume Flow"
     device: "indoor"
@@ -70,14 +69,68 @@ datapoints:
     subs:
       Actual: { suffix: "current" }
 
-  271:  # DomesticHotWaterSensor
+  271:
     type: "temperature_sensor"
     name: "Hot Water"
     device: "tank"
     subs:
       Actual: { suffix: "" }
 
-  # Mixer circuit flow temperatures (Actual only for dashboard)
+  396:
+    type: "temperature_setpoint"
+    name: "DHW Setpoint"
+    device: "tank"
+    min: 10
+    max: 65
+    step: 0.5
+    writable: true
+    write_mode: "write"
+
+  535:
+    type: "energy_sensor"
+    name: "Electrical Energy Statistics"
+    device: "indoor"
+    subs:
+      GridSuppliedEnergy: { }
+      ProducedEnergy: { }
+      GridFeedInEnergy: { }
+
+  377:
+    type: "device_info"
+    name: "Device Identification"
+    device: "indoor"
+    extract_serial: true
+
+  875:
+    type: "generic_sensor"
+    name: "Legionella Protection Activation Time"
+    device: "indoor"
+    icon: "mdi:shield-bug"
+
+  1710:
+    type: "button_action"
+    name: "DHW One-Time Charge"
+    device: "tank"
+    writable: true
+    payload_press: "PRESS"
+    command_template: >
+      {% set cmd = {'mode': 'write', 'data': [[1710, 1]]} %}
+      {{ cmd | to_json }}
+
+  1006:
+    type: "switch_toggle"
+    name: "Quick Mode"
+    device: "indoor"
+    writable: true
+    payload_on: "1"
+    payload_off: "0"
+    state_on: "1"
+    state_off: "0"
+    command_template: >
+      {% set cmd = {'mode': 'write', 'data': [[1006, value]]} %}
+      {{ cmd | to_json }}
+
+  # --- Mixer circuit flow temperatures ---
   284:  # MixerOneCircuitFlowTemperatureSensor
     type: "temperature_sensor"
     name: "Circuit 1 Flow Temperature"
@@ -92,7 +145,6 @@ datapoints:
     subs:
       Actual: { suffix: "current" }
 
-  # Heating buffer temperature (Vitocell Pufferspeicher)
   3016:  # HeatingBufferTemperatureSensor
     type: "temperature_sensor"
     name: "Heating Buffer Temperature"
@@ -100,10 +152,15 @@ datapoints:
     subs:
       Actual: { suffix: "" }
 
-  # Power and thermal capacity (for dashboards and COP calcs)
+  # --- Power and thermal capacity ---
   2496:  # CurrentThermalCapacitySystem (W)
     type: "power_sensor"
     name: "Thermal Power (System)"
+    device: "indoor"
+
+  2488:  # CurrentElectricalPowerConsumptionSystem
+    type: "power_sensor"
+    name: "Power Consumption (System)"
     device: "indoor"
 
   1603:  # PointOfCommonCouplingPower
@@ -113,34 +170,7 @@ datapoints:
     subs:
       ActivePower: { suffix: "current" }
 
-  # Electrical energy totals (counters)
-  535:  # ObjectElectricalEnergyStatistical
-    type: "energy_sensor"
-    name: "Electrical Energy Statistics"
-    device: "indoor"
-    subs:
-      GridSuppliedEnergy: { }
-      ProducedEnergy: { }
-      GridFeedInEnergy: { }
-
-  377:  # IdentNumber - for device identification
-    type: "device_info"
-    name: "Device Identification"
-    device: "indoor"
-    extract_serial: true
-
-  396:  # DomesticHotWaterTemperatureSetpoint - Writable Setpoint
-    type: "temperature_setpoint"
-    name: "DHW Setpoint"
-    device: "tank"
-    min: 10
-    max: 65
-    step: 0.5
-    writable: true
-    write_mode: "write"
-
-  # DomesticHotWaterOperationState - EXPERIMENTAL: Mode mapping from Vitodens docs,
-  # Vitocal 250 mode values NOT YET CONFIRMED on real hardware
+  # --- DHW Operation State + water_heater ---
   531:  # DomesticHotWaterOperationState
     type: "generic_sensor"
     name: "DHW Operation Mode"
@@ -155,7 +185,6 @@ datapoints:
       temperature_did: 396
       temperature_did_name: "DomesticHotWaterTemperatureSetpoint"
       modes: ["off", "eco", "performance"]
-      # EXPERIMENTAL mode mapping — values unconfirmed for Vitocal
       mode_state_template: >
         {% set m = value | int(0) %}
         {% if m == 0 %}off{% elif m == 1 %}eco{% else %}performance{% endif %}
@@ -171,7 +200,7 @@ datapoints:
       precision: 0.5
       temperature_unit: "C"
 
-  # Vitocal 250 - simple migrations from manual HA config
+  # --- Heat pump specific ---
   2442:  # HeatPumpFrostProtection
     type: "binary_onoff"
     name: "Heat Pump Frost Protection"
@@ -179,7 +208,7 @@ datapoints:
     payload_off: "0"
     payload_on: "1"
 
-  401:  # MixerOneCircuitPump (HK1 pump status)
+  401:  # MixerOneCircuitPump
     type: "binary_onoff"
     name: "Circuit 1 Pump"
     device: "mixer"
@@ -188,22 +217,26 @@ datapoints:
     payload_on: "1"
     trigger_sub: "PowerState"
 
-  2488:  # CurrentElectricalPowerConsumptionSystem
-    type: "power_sensor"
-    name: "Power Consumption (System)"
-    device: "indoor"
+  402:  # MixerTwoCircuitPump
+    type: "binary_onoff"
+    name: "Circuit 2 Pump"
+    device: "mixer"
+    icon: "mdi:pump"
+    payload_off: "0"
+    payload_on: "1"
+    trigger_sub: "PowerState"
 
-  1775:  # PrimaryCircuitFanOne (%)
+  1775:  # PrimaryCircuitFanOne
     type: "pump_sensor"
     name: "Primary Circuit Fan 1"
     device: "outdoor"
 
-  1776:  # PrimaryCircuitFanTwo (%)
+  1776:  # PrimaryCircuitFanTwo
     type: "pump_sensor"
     name: "Primary Circuit Fan 2"
     device: "outdoor"
 
-  # Writable number (DID 2626)
+  # --- Writable number (safety validated) ---
   2626:  # MaximumPowerElectricalHeater (W)
     type: "power_sensor"
     name: "Max Power Electric Heater"
@@ -212,8 +245,6 @@ datapoints:
     min: 0
     max: 8000
     step: 100
-    # SAFE-01: Values 1-3999W are DANGEROUS (Viessmann FW bug, Discussion #205)
-    # Compressor failure and valve oscillation. Safe values: 0, >=4000W.
     command_template: >
       {% set intvalue = value | int %}
       {% if intvalue > 0 and intvalue < 4000 %}
@@ -223,8 +254,8 @@ datapoints:
       {{ cmd | to_json }}
       {% endif %}
 
-  # Additional binary sensors
-  2855:  # HK1 frost protection config
+  # --- Binary sensors ---
+  2855:
     type: "binary_onoff"
     name: "Circuit 1 Frost Protection"
     device: "mixer"
@@ -232,22 +263,13 @@ datapoints:
     payload_on: "1"
     trigger_sub: "State"
 
-  2856:  # HK2 frost protection config
+  2856:
     type: "binary_onoff"
     name: "Circuit 2 Frost Protection"
     device: "mixer"
     payload_off: "0"
     payload_on: "1"
     trigger_sub: "State"
-
-  402:  # MixerTwoCircuitPump (HK2 pump status)
-    type: "binary_onoff"
-    name: "Circuit 2 Pump"
-    device: "mixer"
-    icon: "mdi:pump"
-    payload_off: "0"
-    payload_on: "1"
-    trigger_sub: "PowerState"
 
   2351:  # HeatPumpCompressor
     type: "binary_onoff"
@@ -265,6 +287,7 @@ datapoints:
     payload_on: "1"
     trigger_sub: "PowerState"
 
+  # --- Statistics ---
   2369:  # HeatPumpCompressorStatistical
     type: "generic_sensor"
     name: "Compressor Statistics"
@@ -291,7 +314,7 @@ datapoints:
         icon: "mdi:counter"
         state_class: "total_increasing"
 
-  # Temperature sensors with /Actual
+  # --- Temperature sensors ---
   1770:  # SecondaryOutletTemperatureSensor
     type: "temperature_sensor"
     name: "Secondary Circuit Supply Temperature"
@@ -320,7 +343,14 @@ datapoints:
     subs:
       Actual: { suffix: "current" }
 
-  # EMS Resulting Control State with mapping
+  354:  # PrimaryHeatExchanger
+    type: "temperature_sensor"
+    name: "Primary Heat Exchanger Temperature"
+    device: "indoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  # --- Status DIDs ---
   2350:  # EnergyManagmentSystemResultingControlState
     type: "generic_sensor"
     name: "Smart Grid Operating State"
@@ -339,116 +369,6 @@ datapoints:
       {% else %}
         {{ value }}
       {% endif %}
-
-  # LegionellaProtectionActivationTime - read-only, write-blacklisted (SAFE-03)
-  875:  # LegionellaProtectionActivationTime
-    type: "generic_sensor"
-    name: "Legionella Protection Activation Time"
-    device: "indoor"
-    icon: "mdi:shield-bug"
-
-  # DomesticHotWaterOneTimeCharge - stateless Button
-  1710:  # DomesticHotWaterOneTimeCharge
-    type: "button_action"
-    name: "DHW One-Time Charge"
-    device: "tank"
-    writable: true
-    payload_press: "PRESS"
-    command_template: >
-      {% set cmd = {'mode': 'write', 'data': [[1710, 1]]} %}
-      {{ cmd | to_json }}
-
-  # QuickMode - Switch: on=1, off=0
-  1006:  # QuickMode
-    type: "switch_toggle"
-    name: "Quick Mode"
-    device: "indoor"
-    writable: true
-    payload_on: "1"
-    payload_off: "0"
-    state_on: "1"
-    state_off: "0"
-    command_template: >
-      {% set cmd = {'mode': 'write', 'data': [[1006, value]]} %}
-      {{ cmd | to_json }}
-
-  # Heating circuit 1 pump: Setpoint via 1102
-  1102:  # MixerOneCircuitPumpMinimumMaximumLimit
-    type: "pump_sensor"
-    name: "Circuit 1 Pump"
-    device: "mixer"
-    subs:
-      Setpoint:
-        entity_type: "number"
-        writable: true
-        min: 20
-        max: 100
-        step: 5
-        unit_of_measurement: "%"
-        icon: "mdi:pump"
-        command_template: >
-          {% set intvalue = value | int %}
-          {% set cmddata = '14' + '%02x' % intvalue + '%02x' % intvalue %}
-          {% set cmd = {'mode': 'write-raw', 'data': [[1102, cmddata]]} %}
-          {{ cmd | to_json }}
-
-  # Heating circuit 1 flow min/max via 1192
-  1192:  # MixerOneCircuitFlowTemperatureMinimumMaximumLimit
-    type: "temperature_setpoint"
-    name: "Circuit 1 Flow Temperature"
-    device: "mixer"
-    subs:
-      Minimum:
-        entity_type: "number"
-        writable: true
-        min: 10
-        max: 60
-        step: 1
-        unit_of_measurement: "°C"
-        icon: "mdi:thermometer"
-        command_template: >
-          {% set flowmax = min(max(states('sensor.1192_mixeronecircuitflowtemperature_maximum') | int * 10,100),600) %}
-          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
-          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
-          {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
-          {{ cmd | to_json }}
-
-      Maximum:
-        entity_type: "number"
-        writable: true
-        min: 10
-        max: 60
-        step: 1
-        unit_of_measurement: "°C"
-        icon: "mdi:thermometer"
-        command_template: >
-          {% set flowmin = min(max(states('sensor.1192_mixeronecircuitflowtemperature_minimum') | int * 10,100),600) %}
-          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
-          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
-          {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
-          {{ cmd | to_json }}
-
-  # Heating circuit 2 pump: Setpoint via 1103
-  1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
-    type: "pump_sensor"
-    name: "Circuit 2 Pump"
-    device: "mixer"
-    subs:
-      Setpoint:
-        entity_type: "number"
-        writable: true
-        min: 20
-        max: 100
-        step: 5
-        unit_of_measurement: "%"
-        icon: "mdi:pump"
-        command_template: >
-          {% set intvalue = value | int %}
-          {% set cmddata = '1464' + '%02x' % intvalue %}
-          {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
-          {{ cmd | to_json }}
-
-  # --- Status DIDs (DATA-03 + DATA-05) ---
 
   2335:  # FourWayValve
     type: "generic_sensor"
@@ -475,54 +395,20 @@ datapoints:
     unit_of_measurement: "rps"
     state_class: "measurement"
 
-  354:  # PrimaryHeatExchanger
-    type: "temperature_sensor"
-    name: "Primary Heat Exchanger Temperature"
-    device: "indoor"
-    subs:
-      Actual: { suffix: "current" }
-
-  1690:  # PVStatus
+  # --- PV ---
+  1690:
     type: "generic_sensor"
     name: "PV Status"
     device: "energy"
     icon: "mdi:solar-power"
 
-  1834:  # PVPowerGeneration
+  1834:
     type: "power_sensor"
     name: "PV Power Generation"
     device: "energy"
     icon: "mdi:solar-power"
 
-  # --- Error / DTC lists ---
-  257:  # StatusDtcList
-    type: "error_list"
-    name: "Status List"
-    device: "indoor"
-    icon: "mdi:alert-circle-outline"
-    entity_category: "diagnostic"
-    json_attributes_topic: "open3e/680_257_StatusDtcList"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set count = data.get('Count', 0) | int(0) %}
-      {% if count == 0 %}No errors{% else %}{{ count }} active{% endif %}
-
-  265:  # ErrorDtcList
-    type: "error_list"
-    name: "Error List"
-    device: "indoor"
-    icon: "mdi:alert-octagon"
-    entity_category: "diagnostic"
-    json_attributes_topic: "open3e/680_265_ErrorDtcList"
-    json_attributes_template: "{{ value }}"
-    value_template: >
-      {% set data = value_json if value_json is mapping else {} %}
-      {% set count = data.get('Count', 0) | int(0) %}
-      {% if count == 0 %}No errors{% else %}{{ count }} active{% endif %}
-
-  # Room temperature setpoints (Comfort/Standard/Reduced)
-  # DID 424/426: O3EComplexType with 5 sub-items, scale=10 (210 = 21.0 degC)
+  # --- Room temperature setpoints ---
   424:  # MixerOneCircuitRoomTemperatureSetpoint
     type: "temperature_sensor"
     name: "Circuit 1 Room Setpoint"
@@ -553,8 +439,8 @@ datapoints:
         suffix: ""
         icon: "mdi:thermometer-minus"
 
-  # Heating circuit 1/2 operation modes
-  # OpModes enum: 0=Off, 1=Heating, 5=Cooling, 255=Automatic
+  # --- Heating circuit operation modes (extended for heat pumps) ---
+  # OpModes: 0=Off, 1=Heating, 5=Cooling, 255=Automatic
   # NEEDS-VERIFY: Cooling mode (5) untested on Vitocal 250-A hardware
   1415:  # MixerOneCircuitOperationState
     type: "select_mode"
@@ -660,41 +546,93 @@ datapoints:
         {% set cmd = {'mode': 'write-raw', 'data':[[426, cmddata]]} %}
         {{ cmd | to_json }}
 
+  # --- Heating curve eco limits (Phase 2.3) ---
+  # Read-only: full heating curve is a complex multi-DID calculation,
+  # these show the eco-mode boundaries
+  2426:  # EcoHeatingLimitTemperature
+    type: "temperature_sensor"
+    name: "Eco Heating Limit"
+    device: "indoor"
+    subs:
+      Actual: { suffix: "" }
 
-# Device identification (priority: first found is used)
-device_identification_dids:
-  377:  # IdentNumber - often serial/model info
-    type: "device_info"
-    name: "Device Identification"
-    extract_model: true
-  256:  # DeviceProperty
-    type: "device_info"
-    name: "Device Property"
+  2427:  # EcoCoolingLimitTemperature
+    type: "temperature_sensor"
+    name: "Eco Cooling Limit"
+    device: "indoor"
+    subs:
+      Actual: { suffix: "" }
 
-# Device mapping based on found strings
-device_patterns:
-  - pattern: "250"
-    name: "Vitocal 250-A"
-    model: "Vitocal 250-A"
-  - pattern: "252"
-    name: "Vitocal 252-A"
-    model: "Vitocal 252-A"
-  - pattern: "VX3"
-    name: "Viessmann VX3"
-    model: "VX3"
-  - pattern: "VDENS"
-    name: "Viessmann Vitodens"
-    model: "Vitodens"
+  # --- Pump setpoints ---
+  1102:  # MixerOneCircuitPumpMinimumMaximumLimit
+    type: "pump_sensor"
+    name: "Circuit 1 Pump"
+    device: "mixer"
+    subs:
+      Setpoint:
+        entity_type: "number"
+        writable: true
+        min: 20
+        max: 100
+        step: 5
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
+        command_template: >
+          {% set intvalue = value | int %}
+          {% set cmddata = '14' + '%02x' % intvalue + '%02x' % intvalue %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1102, cmddata]]} %}
+          {{ cmd | to_json }}
 
-# Fallback if no device info found
-default_device:
-  name: "Open3E System"
-  model: "E3 Controller"
+  1192:  # MixerOneCircuitFlowTemperatureMinimumMaximumLimit
+    type: "temperature_setpoint"
+    name: "Circuit 1 Flow Temperature"
+    device: "mixer"
+    subs:
+      Minimum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmax = min(max(states('sensor.1192_mixeronecircuitflowtemperature_maximum') | int * 10,100),600) %}
+          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
+          {{ cmd | to_json }}
 
-# Write-blacklisted DIDs (read allowed, write blocked in discovery)
-write_blacklisted_dids:
-  - 875  # LegionellaProtectionActivationTime - safety-critical, read-only
+      Maximum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmin = min(max(states('sensor.1192_mixeronecircuitflowtemperature_minimum') | int * 10,100),600) %}
+          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
+          {{ cmd | to_json }}
 
-# Faulty DIDs (ignored)
-ignored_dids:
-  - 540  # Device rejected read access
+  1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
+    type: "pump_sensor"
+    name: "Circuit 2 Pump"
+    device: "mixer"
+    subs:
+      Setpoint:
+        entity_type: "number"
+        writable: true
+        min: 20
+        max: 100
+        step: 5
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
+        command_template: >
+          {% set intvalue = value | int %}
+          {% set cmddata = '1464' + '%02x' % intvalue %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
+          {{ cmd | to_json }}

@@ -95,7 +95,7 @@ temperature_setpoint:
 select_mode:
   entity_type: "select"
   icon: "mdi:home-circle"
-  options: ["off", "auto"]
+  options: ["off", "heat", "cool", "auto"]
 
 temperature_setpoint_complex:
   entity_type: "multi_number"
@@ -147,6 +147,16 @@ binary_onoff:
   entity_type: "binary_sensor"
   device_class: "power"
   icon: "mdi:power"
+
+# Error/DTC list (sensor with JSON attributes)
+error_list:
+  entity_type: "sensor"
+  icon: "mdi:alert-circle-outline"
+
+# Schedule sensor (read-only, JSON attributes)
+schedule_sensor:
+  entity_type: "sensor"
+  icon: "mdi:calendar-clock"
 
 # Water heater (multi-DID: current temp + setpoint + mode)
 water_heater:

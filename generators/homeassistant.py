@@ -22,6 +22,7 @@ _ENTITY_KEYS = (
     'device_class', 'unit_of_measurement', 'icon', 'state_class',
     'mode', 'payload_on', 'payload_off', 'state_on', 'state_off',
     'payload_press', 'value_template', 'command_template', 'options',
+    'json_attributes_topic', 'json_attributes_template', 'entity_category',
 )
 
 # Entity types that have no persistent state (no state_topic)
@@ -29,8 +30,8 @@ _STATELESS_ENTITY_TYPES = frozenset({"button"})
 
 
 class HomeAssistantGenerator(BaseGenerator):
-    def __init__(self, config_dir: str = "config", language: str = "en", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True, auto_discover: bool = False):
-        super().__init__(config_dir=config_dir, language=language)
+    def __init__(self, config_dir: str = "config", language: str = "en", discovery_prefix: str = "homeassistant", add_test_prefix: bool = True, auto_discover: bool = False, profile: str = "auto"):
+        super().__init__(config_dir=config_dir, language=language, profile=profile)
         self.discovery_prefix = discovery_prefix
         self.add_test_prefix = add_test_prefix
         self.auto_discover = auto_discover

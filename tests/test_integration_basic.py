@@ -103,6 +103,8 @@ def test_bridge_republish_on_ha_restart(mock_bridge):
 # ---------------------------------------------------------------------------
 def test_bridge_handles_unknown_did(mock_bridge):
     bridge, mock_client = mock_bridge
+    # Disable auto-discover to test that unknown DIDs are silently skipped
+    bridge.generator.auto_discover = False
 
     msg = FakeMessage("open3e/680_99999_UnknownSensor/Value", "123")
     # Must not raise

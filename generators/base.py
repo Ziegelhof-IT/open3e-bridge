@@ -18,13 +18,19 @@ _EN_SUFFIXES = {
 
 
 class BaseGenerator:
-    def __init__(self, config_dir: str = "config", language: str = "en"):
+    def __init__(self, config_dir: str = "config", language: str = "en", profile: str = "auto"):
         self.config_dir = Path(config_dir)
         self.language = language
+        self.profile = profile
+        self.datapoints: dict[str, Any] = {}
+        self._active_profile = "common"
 
-        # Load config files
-        self.datapoints = self._load_yaml(self.config_dir / "datapoints.yaml")
+        # Load config: profile-based if profiles/ exists, else legacy datapoints.yaml
+        self._load_config()
         self.type_templates = self._load_yaml(self.config_dir / "templates" / "types.yaml")
+
+        # Load local overlay (config/local/ — custom DIDs without forking)
+        self._load_local_overlay()
 
         # Load translations only for non-English languages
         if language != "en":
@@ -217,6 +223,93 @@ class BaseGenerator:
                 for tk in template_keys:
                     if tk in climate and isinstance(climate[tk], str):
                         _check(key, f"climate {tk}", climate[tk])
+
+    def _load_config(self):
+        """Load datapoints config: profile-based if profiles/ exists, else legacy datapoints.yaml."""
+        profiles_dir = self.config_dir / "profiles"
+        if profiles_dir.is_dir() and (profiles_dir / "common.yaml").exists():
+            self._load_profile(profiles_dir)
+        else:
+            # Legacy: single datapoints.yaml
+            self.datapoints = self._load_yaml(self.config_dir / "datapoints.yaml")
+
+    def _load_profile(self, profiles_dir: Path):
+        """Load profile-based config: common.yaml + device-specific profile.
+
+        Merge order: common → profile → (later: local overlay wins)
+        """
+        # Always start with common
+        self.datapoints = self._load_yaml(profiles_dir / "common.yaml")
+
+        # Determine which profile to load
+        profile_name = self.profile
+        if profile_name == "auto":
+            # Auto-detect: for now default to vitocal if available, else common-only
+            # Real auto-detection happens at runtime via DID 377 (not implemented yet)
+            if (profiles_dir / "vitocal.yaml").exists():
+                profile_name = "vitocal"
+            else:
+                profile_name = "common"
+
+        if profile_name != "common":
+            profile_path = profiles_dir / f"{profile_name}.yaml"
+            if profile_path.exists():
+                overlay = self._load_yaml(profile_path)
+                self._merge_profile_overlay(overlay)
+                logger.info("Loaded profile: %s", profile_name)
+            else:
+                logger.warning("Profile '%s' not found at %s, using common only", profile_name, profile_path)
+
+        self._active_profile = profile_name
+
+    def _merge_profile_overlay(self, overlay: dict):
+        """Merge a profile overlay into the current datapoints config."""
+        # Merge devices (overlay wins)
+        if "devices" in overlay:
+            base_devs = self.datapoints.setdefault("devices", {})
+            base_devs.update(overlay["devices"])
+
+        # Merge datapoints (overlay wins per-DID, full replacement)
+        if "datapoints" in overlay:
+            base_dps = self.datapoints.setdefault("datapoints", {})
+            base_dps.update(overlay["datapoints"])
+
+        # Merge top-level keys (device_identification_dids, device_patterns, etc.)
+        for key in ("device_identification_dids", "device_patterns", "default_device",
+                     "write_blacklisted_dids", "ignored_dids"):
+            if key in overlay:
+                self.datapoints[key] = overlay[key]
+
+    def _load_local_overlay(self):
+        """Load config/local/ overlay files and merge into main config.
+
+        Allows adding custom datapoints and type templates without modifying
+        the shipped config files — no fork needed for custom DIDs.
+        """
+        local_dir = self.config_dir / "local"
+        if not local_dir.is_dir():
+            return
+
+        # Merge local datapoints.yaml
+        local_dp = local_dir / "datapoints.yaml"
+        if local_dp.exists():
+            overlay = self._load_yaml(local_dp)
+            # Merge datapoints dict (local wins)
+            if "datapoints" in overlay:
+                base_dps = self.datapoints.setdefault("datapoints", {})
+                base_dps.update(overlay["datapoints"])
+            # Merge devices dict (local wins)
+            if "devices" in overlay:
+                base_devs = self.datapoints.setdefault("devices", {})
+                base_devs.update(overlay["devices"])
+            logger.info("Loaded local datapoints overlay: %s", local_dp)
+
+        # Merge local types.yaml
+        local_types = local_dir / "types.yaml"
+        if local_types.exists():
+            overlay_types = self._load_yaml(local_types)
+            self.type_templates.update(overlay_types)
+            logger.info("Loaded local types overlay: %s", local_types)
 
     def _load_yaml(self, filepath: Path) -> dict[str, Any]:
         """Load YAML file"""

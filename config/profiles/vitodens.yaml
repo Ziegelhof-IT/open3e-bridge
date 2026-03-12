@@ -1,0 +1,160 @@
+# Vitodens profile — gas boiler specific DIDs
+# Merges on top of common.yaml (vitodens entries win)
+schema_version: 1
+
+devices:
+  boiler:
+    name: "Vitodens Boiler"
+    model: "Vitodens"
+  dhw:
+    name: "Domestic Hot Water"
+    model: "DHW"
+  circuit:
+    name: "Heating Circuit"
+    model: "Heating Circuit"
+  solar:
+    name: "Solar Thermal"
+    model: "Solar"
+
+datapoints:
+  # --- Override common devices for Vitodens-specific grouping ---
+  268:
+    type: "temperature_sensor"
+    name: "Flow Temperature"
+    device: "boiler"
+    subs:
+      Actual: { suffix: "current" }
+
+  269:
+    type: "temperature_sensor"
+    name: "Return Temperature"
+    device: "boiler"
+    subs:
+      Actual: { suffix: "current" }
+
+  274:
+    type: "temperature_sensor"
+    name: "Outside Temperature"
+    device: "boiler"
+    subs:
+      Actual: { suffix: "current" }
+
+  318:
+    type: "pressure_sensor"
+    name: "Water Pressure"
+    device: "boiler"
+    subs:
+      Actual: { suffix: "current" }
+
+  381:
+    type: "pump_sensor"
+    name: "Internal Pump"
+    device: "boiler"
+    subs:
+      Actual: { suffix: "current" }
+
+  271:
+    type: "temperature_sensor"
+    name: "Hot Water"
+    device: "dhw"
+    subs:
+      Actual: { suffix: "" }
+
+  377:
+    type: "device_info"
+    name: "Device Identification"
+    device: "boiler"
+    extract_serial: true
+
+  # --- Vitodens-specific DIDs ---
+  331:  # FlueGasTemperatureSensor
+    type: "temperature_sensor"
+    name: "Flue Gas Temperature"
+    device: "boiler"
+    subs:
+      Actual: { suffix: "current" }
+
+  360:  # DomesticHotWaterOutletSensor
+    type: "temperature_sensor"
+    name: "DHW Outlet Temperature"
+    device: "dhw"
+    subs:
+      Actual: { suffix: "current" }
+
+  364:  # Flame
+    type: "binary_onoff"
+    name: "Burner Flame"
+    device: "boiler"
+    icon: "mdi:fire"
+    payload_off: "0"
+    payload_on: "1"
+    trigger_sub: "State"
+
+  365:  # FlameStatistical
+    type: "generic_sensor"
+    name: "Burner Statistics"
+    device: "boiler"
+    subs:
+      hours:
+        unit_of_measurement: "h"
+        icon: "mdi:clock-outline"
+        state_class: "total_increasing"
+      starts:
+        icon: "mdi:counter"
+        state_class: "total_increasing"
+
+  373:  # FanTargetSpeed
+    type: "generic_sensor"
+    name: "Fan Speed"
+    device: "boiler"
+    unit_of_measurement: "rpm"
+    state_class: "measurement"
+    icon: "mdi:fan"
+
+  596:  # CentralHeatingPartLoadPercent
+    type: "pump_sensor"
+    name: "CH Modulation"
+    device: "boiler"
+    icon: "mdi:percent"
+
+  597:  # DomesticHotWaterPartLoadPercent
+    type: "pump_sensor"
+    name: "DHW Modulation"
+    device: "boiler"
+    icon: "mdi:percent"
+
+  544:  # GasConsumptionCentralHeating
+    type: "energy_sensor"
+    name: "Gas Consumption CH"
+    device: "boiler"
+    icon: "mdi:fire"
+    subs:
+      Today: { }
+      Last7Days: { }
+      CurrentMonth: { }
+      CurrentYear: { }
+
+  545:  # GasConsumptionDomesticHotWater
+    type: "energy_sensor"
+    name: "Gas Consumption DHW"
+    device: "boiler"
+    icon: "mdi:fire"
+    subs:
+      Today: { }
+      Last7Days: { }
+      CurrentMonth: { }
+      CurrentYear: { }
+
+  874:  # LegionellaProtectionTargetTemperatureSetpoint
+    type: "temperature_sensor"
+    name: "Legionella Protection Target"
+    device: "dhw"
+    icon: "mdi:shield-bug"
+    subs:
+      Actual: { suffix: "" }
+
+  929:  # GasType
+    type: "generic_sensor"
+    name: "Gas Type"
+    device: "boiler"
+    icon: "mdi:gas-burner"

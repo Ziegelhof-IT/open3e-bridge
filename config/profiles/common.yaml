@@ -1,0 +1,404 @@
+# Common profile — DIDs present on all E3 devices
+# Loaded as base, then device-specific profile merges on top
+schema_version: 1
+
+devices:
+  system:
+    name: "Open3E System"
+    model: "E3 Controller"
+  dhw:
+    name: "Domestic Hot Water"
+    model: "DHW"
+  circuit:
+    name: "Heating Circuit"
+    model: "Heating Circuit"
+
+datapoints:
+  # --- Temperature sensors ---
+  268:  # FlowTemperatureSensor
+    type: "temperature_sensor"
+    name: "Flow Temperature"
+    device: "system"
+    subs:
+      Actual: { suffix: "current" }
+
+  269:  # ReturnTemperatureSensor
+    type: "temperature_sensor"
+    name: "Return Temperature"
+    device: "system"
+    subs:
+      Actual: { suffix: "current" }
+
+  274:  # OutsideTemperatureSensor
+    type: "temperature_sensor"
+    name: "Outside Temperature"
+    device: "system"
+    subs:
+      Actual: { suffix: "current" }
+
+  318:  # WaterPressureSensor
+    type: "pressure_sensor"
+    name: "Water Pressure"
+    device: "system"
+    subs:
+      Actual: { suffix: "current" }
+
+  # --- Pump and flow ---
+  381:  # CentralHeatingPump
+    type: "pump_sensor"
+    name: "Internal Pump"
+    device: "system"
+    subs:
+      Actual: { suffix: "current" }
+
+  1043:  # AllengraSensor (Volume Flow)
+    type: "generic_sensor"
+    name: "Volume Flow"
+    device: "system"
+    icon: "mdi:water-pump"
+    unit_of_measurement: "l/h"
+    state_class: "measurement"
+    subs:
+      Actual: { suffix: "current" }
+
+  # --- Domestic hot water ---
+  271:  # DomesticHotWaterSensor
+    type: "temperature_sensor"
+    name: "Hot Water"
+    device: "dhw"
+    subs:
+      Actual: { suffix: "" }
+
+  396:  # DomesticHotWaterTemperatureSetpoint
+    type: "temperature_setpoint"
+    name: "DHW Setpoint"
+    device: "dhw"
+    min: 10
+    max: 65
+    step: 0.5
+    writable: true
+    write_mode: "write"
+
+  # --- Energy ---
+  535:  # ObjectElectricalEnergyStatistical
+    type: "energy_sensor"
+    name: "Electrical Energy Statistics"
+    device: "system"
+    subs:
+      GridSuppliedEnergy: { }
+      ProducedEnergy: { }
+      GridFeedInEnergy: { }
+
+  # --- Device identification ---
+  377:  # IdentNumber
+    type: "device_info"
+    name: "Device Identification"
+    device: "system"
+    extract_serial: true
+
+  # --- Safety and protection ---
+  875:  # LegionellaProtectionActivationTime
+    type: "generic_sensor"
+    name: "Legionella Protection Activation Time"
+    device: "system"
+    icon: "mdi:shield-bug"
+
+  # --- DHW controls ---
+  1710:  # DomesticHotWaterOneTimeCharge
+    type: "button_action"
+    name: "DHW One-Time Charge"
+    device: "dhw"
+    writable: true
+    payload_press: "PRESS"
+    command_template: >
+      {% set cmd = {'mode': 'write', 'data': [[1710, 1]]} %}
+      {{ cmd | to_json }}
+
+  1006:  # QuickMode
+    type: "switch_toggle"
+    name: "Quick Mode"
+    device: "system"
+    writable: true
+    payload_on: "1"
+    payload_off: "0"
+    state_on: "1"
+    state_off: "0"
+    command_template: >
+      {% set cmd = {'mode': 'write', 'data': [[1006, value]]} %}
+      {{ cmd | to_json }}
+
+  # --- Error / DTC lists (Phase 1.3) ---
+  257:  # StatusDtcList
+    type: "error_list"
+    name: "Status List"
+    device: "system"
+    icon: "mdi:alert-circle-outline"
+    entity_category: "diagnostic"
+    json_attributes_topic: "open3e/680_257_StatusDtcList"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set count = data.get('Count', 0) | int(0) %}
+      {% if count == 0 %}No errors{% else %}{{ count }} active{% endif %}
+
+  265:  # ErrorDtcList
+    type: "error_list"
+    name: "Error List"
+    device: "system"
+    icon: "mdi:alert-octagon"
+    entity_category: "diagnostic"
+    json_attributes_topic: "open3e/680_265_ErrorDtcList"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set count = data.get('Count', 0) | int(0) %}
+      {% if count == 0 %}No errors{% else %}{{ count }} active{% endif %}
+
+  # --- Schedule DIDs (read-only, Phase 2.1) ---
+  # DHW schedules (Monday-Sunday)
+  691:
+    type: "schedule_sensor"
+    name: "DHW Schedule Monday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_691_DomesticHotWaterTimeScheduleMonday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  692:
+    type: "schedule_sensor"
+    name: "DHW Schedule Tuesday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_692_DomesticHotWaterTimeScheduleTuesday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  693:
+    type: "schedule_sensor"
+    name: "DHW Schedule Wednesday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_693_DomesticHotWaterTimeScheduleWednesday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  694:
+    type: "schedule_sensor"
+    name: "DHW Schedule Thursday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_694_DomesticHotWaterTimeScheduleThursday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  695:
+    type: "schedule_sensor"
+    name: "DHW Schedule Friday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_695_DomesticHotWaterTimeScheduleFriday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  696:
+    type: "schedule_sensor"
+    name: "DHW Schedule Saturday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_696_DomesticHotWaterTimeScheduleSaturday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  697:
+    type: "schedule_sensor"
+    name: "DHW Schedule Sunday"
+    device: "dhw"
+    json_attributes_topic: "open3e/680_697_DomesticHotWaterTimeScheduleSunday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+
+  # Heating circuit 1 schedules (Monday-Sunday)
+  761:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Monday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_761_MixerOneCircuitTimeScheduleMonday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  762:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Tuesday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_762_MixerOneCircuitTimeScheduleTuesday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  763:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Wednesday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_763_MixerOneCircuitTimeScheduleWednesday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  764:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Thursday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_764_MixerOneCircuitTimeScheduleThursday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  765:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Friday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_765_MixerOneCircuitTimeScheduleFriday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  766:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Saturday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_766_MixerOneCircuitTimeScheduleSaturday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+  767:
+    type: "schedule_sensor"
+    name: "HK1 Schedule Sunday"
+    device: "circuit"
+    json_attributes_topic: "open3e/680_767_MixerOneCircuitTimeScheduleSunday"
+    json_attributes_template: "{{ value }}"
+    value_template: >
+      {% set data = value_json if value_json is mapping else {} %}
+      {% set s = data.get('Schedules', []) %}
+      {% if s | length == 0 %}inactive
+      {% else %}{{ s[0].get('Start','?') }}-{{ s[0].get('Stop','?') }}{% endif %}
+
+  # --- Holiday mode (Phase 2.2) ---
+  # DID 511/512 use RawCodec(8) — 8 bytes, internal structure undocumented.
+  # Likely start+end date range. Exposed as raw hex sensor for visibility.
+  # Write support requires reverse-engineering the date format.
+  511:  # HolidayPhase
+    type: "generic_sensor"
+    name: "Holiday Mode"
+    device: "system"
+    icon: "mdi:beach"
+
+  512:  # HolidayAtHomePhase
+    type: "generic_sensor"
+    name: "Holiday At Home Mode"
+    device: "system"
+    icon: "mdi:home-account"
+
+  # --- Heating circuit operation modes (base: off/auto) ---
+  # Overridden in vitocal.yaml with heat/cool modes
+  1415:  # MixerOneCircuitOperationState
+    type: "select_mode"
+    name: "Circuit 1 Operation Mode"
+    device: "circuit"
+    subs:
+      Mode/ID:
+        entity_type: "select"
+        options: ["off", "auto"]
+        value_template: "{{ 'off' if (value | int(0)) == 0 else 'auto' }}"
+        command_template: >
+          {% set values = { 'auto':'ff00', 'off':'0000'} %}
+          {% set cmd = {'mode': 'write-raw', 'data':[[1415, values[value]]]} %}
+          {{ cmd | to_json }}
+
+  1416:  # MixerTwoCircuitOperationState
+    type: "select_mode"
+    name: "Circuit 2 Operation Mode"
+    device: "circuit"
+    subs:
+      Mode/ID:
+        entity_type: "select"
+        options: ["off", "auto"]
+        value_template: "{{ 'off' if (value | int(0)) == 0 else 'auto' }}"
+        command_template: >
+          {% set values = { 'auto':'ff00', 'off':'0000'} %}
+          {% set cmd = {'mode': 'write-raw', 'data':[[1416, values[value]]]} %}
+          {{ cmd | to_json }}
+
+# Device identification (priority: first found is used)
+device_identification_dids:
+  377:
+    type: "device_info"
+    name: "Device Identification"
+    extract_model: true
+  256:
+    type: "device_info"
+    name: "Device Property"
+
+# Device mapping based on found strings
+device_patterns:
+  - pattern: "250"
+    name: "Vitocal 250-A"
+    model: "Vitocal 250-A"
+  - pattern: "252"
+    name: "Vitocal 252-A"
+    model: "Vitocal 252-A"
+  - pattern: "VX3"
+    name: "Viessmann VX3"
+    model: "VX3"
+  - pattern: "VDENS"
+    name: "Viessmann Vitodens"
+    model: "Vitodens"
+  - pattern: "aroTHERM"
+    name: "Vaillant aroTHERM"
+    model: "aroTHERM"
+  - pattern: "ecoTEC"
+    name: "Vaillant ecoTEC"
+    model: "ecoTEC"
+
+# Fallback if no device info found
+default_device:
+  name: "Open3E System"
+  model: "E3 Controller"
+
+# Write-blacklisted DIDs (read allowed, write blocked in discovery)
+write_blacklisted_dids:
+  - 875  # LegionellaProtectionActivationTime - safety-critical, read-only
+
+# Faulty DIDs (ignored)
+ignored_dids:
+  - 540  # Device rejected read access

@@ -24,7 +24,7 @@ def test_select_discovery_for_operation_mode():
     assert data["unique_id"] == "open3e_680_1415_mode_id"
     assert data["object_id"] == "open3e_680_1415_mode_id"
     assert data["state_topic"] == topic
-    assert data["options"] == ["off", "auto"]
+    assert data["options"] == ["off", "heat", "cool", "auto"]
     # value/command templates should be present per datapoints.yaml
     assert "value_template" in data
     assert "command_template" in data
