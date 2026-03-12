@@ -1,0 +1,33 @@
+# Vitocal ground-source (Sole-Wasser) profile — builds on vitocal
+# For Vitocal 300-G, 333-G, and similar ground-source heat pumps
+# Merges: common → vitocal → vitocal-sole (this file wins)
+schema_version: 1
+base_profile: vitocal
+
+devices:
+  outdoor:
+    name: "Vitocal Ground Source Unit"
+    model: "Vitocal 300-G"
+
+datapoints:
+  # DID 320: On air-source this is refrigerant-to-air temp.
+  # On ground-source this IS the brine/sole temperature.
+  320:  # PrimaryHeatExchangerLiquidTemperatureSensor
+    type: "temperature_sensor"
+    name: "Brine Temperature"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  # Air-source-only DIDs: override with skip markers
+  # (set to device_info type which is filtered from discovery)
+  # Fan speed is meaningless on ground-source models
+  1775:
+    type: "device_info"
+    name: "Primary Circuit Fan 1 (n/a ground-source)"
+    device: "outdoor"
+
+  1776:
+    type: "device_info"
+    name: "Primary Circuit Fan 2 (n/a ground-source)"
+    device: "outdoor"

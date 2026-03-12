@@ -271,6 +271,14 @@ class BaseGenerator:
             profile_path = profiles_dir / f"{profile_name}.yaml"
             if profile_path.exists():
                 overlay = self._load_yaml(profile_path)
+                # Chained profiles: if overlay declares base_profile, load that first
+                base_profile = overlay.get("base_profile")
+                if base_profile and base_profile != "common":
+                    base_path = profiles_dir / f"{base_profile}.yaml"
+                    if base_path.exists():
+                        base_overlay = self._load_yaml(base_path)
+                        self._merge_profile_overlay(base_overlay)
+                        logger.info("Loaded base profile: %s", base_profile)
                 self._merge_profile_overlay(overlay)
                 logger.info("Loaded profile: %s", profile_name)
             else:

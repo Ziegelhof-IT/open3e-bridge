@@ -316,7 +316,7 @@ Options:
   --validate-config       Validate configuration files and exit
   --dump-entities         Show configured entities and exit (no MQTT needed)
   --no-auto-discover      Disable auto-discovery (enabled by default)
-  --profile PROFILE       Device profile: auto, vitocal, vitodens, common (default: auto)
+  --profile PROFILE       Device profile: auto, vitocal, vitocal-sole, vitodens, common (default: auto)
   --devices PATH          Multi-device config (see config/devices.yaml.example)
   --diagnostics-interval N  Publish diagnostics every N seconds (0=disabled)
   --log-level LEVEL       DEBUG, INFO, WARNING, ERROR (default: INFO)
