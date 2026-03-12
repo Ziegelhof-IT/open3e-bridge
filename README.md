@@ -5,13 +5,15 @@ Generates Home Assistant MQTT Discovery from Open3E MQTT topics. No manual HA YA
 ## Is this for me?
 
 This bridge is for you if:
-- You have an **E3-based heating system** — Viessmann (Vitocal, Vitodens, Vx3, Vair) or Vaillant (aroTHERM, ecoTEC) with E3 controller
+- You have a **Viessmann E3-based heating system** — Vitocal, Vitodens, Vx3, or Vair with E3 OneBase controller
 - You want to see temperatures, energy data, and control settings in **Home Assistant**
 - You already have — or are willing to set up — **Open3E** on a Raspberry Pi or Linux PC
 
-This bridge does **not** replace ViCare or myVAILLANT. It adds local control via Home Assistant, without cloud dependency.
+This bridge does **not** replace ViCare. It adds local control via Home Assistant, without cloud dependency.
 
-**Compatibility note:** The bridge ships with profiles for different device types. Vitocal heat pumps have the most complete coverage. Vitodens gas boilers and Vaillant E3 systems work with the common profile and auto-discovery for unconfigured DIDs. Community contributions for additional profiles are welcome.
+**Compatibility note:** The bridge ships with profiles for different device types. Vitocal heat pumps have the most complete coverage. Vitodens gas boilers work with the common profile and auto-discovery for unconfigured DIDs. Community contributions for additional profiles are welcome.
+
+> **Not a Viessmann user?** Vaillant devices (aroTHERM, ecoTEC) use the eBUS protocol, not CAN/UDS — open3e does not support them. See [ebusd](https://github.com/john30/ebusd) for local eBUS access or [mypyllant-component](https://github.com/signalkraft/mypyllant-component) for Vaillant cloud integration with Home Assistant.
 
 ## Prerequisites
 

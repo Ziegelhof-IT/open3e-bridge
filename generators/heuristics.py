@@ -106,8 +106,8 @@ _ECU_DEVICES: dict[int, DeviceHint] = {
     0x68C: DeviceHint("Outdoor Unit", "VCMU", "Refrigerant circuit management"),
     0x68F: DeviceHint("Battery Management", "BMCU", "Battery management (VX3)"),
     0x6C2: DeviceHint("Inverter", "Inverter", "PV/Grid inverter"),
-    0x6C3: DeviceHint("Gateway", "Backend", "Viessmann cloud gateway"),
-    0x6C5: DeviceHint("Gateway", "Backend", "Viessmann cloud gateway"),
+    0x6C3: DeviceHint("Gateway", "Backend", "Cloud gateway"),
+    0x6C5: DeviceHint("Gateway", "Backend", "Cloud gateway"),
     0x6CF: DeviceHint("Auxiliary Heater", "EHCU", "Electric auxiliary heater"),
 }
 

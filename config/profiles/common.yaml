@@ -383,12 +383,6 @@ device_patterns:
   - pattern: "VDENS"
     name: "Viessmann Vitodens"
     model: "Vitodens"
-  - pattern: "aroTHERM"
-    name: "Vaillant aroTHERM"
-    model: "aroTHERM"
-  - pattern: "ecoTEC"
-    name: "Vaillant ecoTEC"
-    model: "ecoTEC"
 
 # Fallback if no device info found
 default_device:
