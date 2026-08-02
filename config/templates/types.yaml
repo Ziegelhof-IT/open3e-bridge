@@ -8,6 +8,13 @@ temperature_sensor:
   unit_of_measurement: "°C"
   icon: "mdi:thermometer"
   state_class: "measurement"
+  # Abgeschaltete Kreise melden den Rohwert -32768, der als -3276.8 °C
+  # durchschlaegt (beobachtet an DID 284, Vorlauf des stillgelegten HK1). Der
+  # Wert verdirbt Statistik, Min/Max und jeden Graphen, in den er geraet.
+  # Unterhalb des absoluten Nullpunkts ist physikalisch nichts gueltig, der
+  # Filter ist damit geraeteunabhaengig korrekt.
+  # Nicht-numerische Payloads laufen ueber den float-Default durch.
+  value_template: "{{ none if value | float(0) < -273.15 else value }}"
 
 pressure_sensor:
   entity_type: "sensor"

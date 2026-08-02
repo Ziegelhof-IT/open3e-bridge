@@ -121,3 +121,31 @@ class TestHeatingCurveRoundtrip:
         states = {f"number.open3e_{ecu}_{did}_gradient": "0.4"}
         result = _render(tmpl, states, value=-5)
         assert result["data"] == [[did, "04fb0000"]]
+
+
+class TestInvalidMarkerSuppression:
+    """DID 284 lieferte -3276.8 °C — den Rohwert -32768 eines abgeschalteten
+    Heizkreises. Der Filter sitzt am Typ-Template temperature_sensor und muss
+    physikalisch unmoegliche Werte zu none machen, ohne gueltige zu verbiegen."""
+
+    @pytest.fixture(scope="class")
+    def tmpl(self):
+        types_path = Path(__file__).resolve().parent.parent / "config" / "templates" / "types.yaml"
+        types = yaml.safe_load(types_path.read_text()) or {}
+        t = types["temperature_sensor"].get("value_template")
+        assert t, "temperature_sensor braucht ein value_template gegen den -32768-Marker"
+        return t
+
+    def _render_raw(self, tmpl, value):
+        return _env().from_string(tmpl).render(value=value).strip()
+
+    def test_invalid_marker_becomes_none(self, tmpl):
+        assert self._render_raw(tmpl, "-3276.8") == "None"
+
+    @pytest.mark.parametrize("value", ["-20.5", "0", "21.6", "52.0", "-273.0"])
+    def test_valid_temperatures_pass_through(self, tmpl, value):
+        assert self._render_raw(tmpl, value) == value
+
+    def test_non_numeric_payload_passes_through(self, tmpl):
+        """Nicht-numerische Payloads duerfen nicht am float-Default haengenbleiben."""
+        assert self._render_raw(tmpl, "unavailable") == "unavailable"
