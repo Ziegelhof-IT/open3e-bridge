@@ -807,3 +807,312 @@ datapoints:
           {% set cmddata = '1464' + '%02x' % intvalue %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
           {{ cmd | to_json }}
+
+  # ==================================================================
+  # Phase 3 — Erweiterte DIDs (2026-08-02)
+  #
+  # Grundsatz: nur "Actual" bzw. der fachlich tragende Sub. Die
+  # Statistikfelder Average/Minimum/Maximum der Fuehler bleiben bewusst
+  # ungemappt — sie erzeugen Zeitreihen, die teils konstant 0 bleiben,
+  # und ihre Qualitaet schwankt (Aussenfuehler meldet Minimum 0.0 bei
+  # Maximum -0.1). "Unknown"-Subs ebenfalls nicht.
+  # ==================================================================
+
+  # --- Kaeltekreis (Diagnose) ---
+  320:  # PrimaryHeatExchangerLiquidTemperatureSensor
+    type: "temperature_sensor"
+    name: "Primary Heat Exchanger Liquid"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  321:  # CompressorInletTemperatureSensor
+    type: "temperature_sensor"
+    name: "Compressor Inlet"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  322:  # CompressorInletPressureSensor
+    type: "pressure_sensor"
+    name: "Compressor Inlet Pressure"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  324:  # CompressorOutletTemperatureSensor
+    type: "temperature_sensor"
+    name: "Compressor Outlet"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  325:  # CompressorOutletPressureSensor
+    type: "pressure_sensor"
+    name: "Compressor Outlet Pressure"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  355:  # SecondaryHeatExchangerLiquidTemperatureSensor
+    type: "temperature_sensor"
+    name: "Secondary Heat Exchanger Liquid"
+    device: "indoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  1769:  # PrimaryInletTemperatureSensor
+    type: "temperature_sensor"
+    name: "Primary Inlet"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  1772:  # CompressorOilTemperatureSensor
+    type: "temperature_sensor"
+    name: "Compressor Oil"
+    device: "outdoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  389:  # ElectronicExpansionValveOneCurrentPositionPercent
+    type: "valve_position"
+    name: "Expansion Valve 1"
+    device: "outdoor"
+
+  391:  # ElectronicExpansionValveTwoCurrentPositionPercent
+    type: "valve_position"
+    name: "Expansion Valve 2"
+    device: "outdoor"
+
+  2735:  # FourThreeWayValveValveCurrentPosition
+    # Enum-Stellung (0-3), kein Prozentwert — daher generic statt valve_position
+    type: "generic_sensor"
+    name: "4/3-Way Valve Position"
+    device: "indoor"
+    icon: "mdi:valve"
+
+  # --- Mischer-Ventile und Pumpen ---
+  475:  # MixerOneCircuitThreeWayValvePositionPercent
+    type: "valve_position"
+    name: "HC1 Three-Way Valve"
+    device: "mixer"
+    subs:
+      Position: { suffix: "current" }
+
+  476:  # MixerTwoCircuitThreeWayValvePositionPercent
+    type: "valve_position"
+    name: "HC2 Three-Way Valve"
+    device: "mixer"
+    subs:
+      Position: { suffix: "current" }
+
+  1100:  # CentralHeatingPumpMinimumMaximumLimit
+    type: "pump_sensor"
+    name: "Central Heating Pump Limit"
+    device: "indoor"
+    subs:
+      Setpoint: { suffix: "setpoint" }
+      MinSpeed: { suffix: "min" }
+      MaxSpeed: { suffix: "max" }
+
+  1101:  # DomesticHotWaterPumpMinimumMaximumLimit
+    type: "pump_sensor"
+    name: "DHW Pump Limit"
+    device: "tank"
+    subs:
+      Setpoint: { suffix: "setpoint" }
+      MinSpeed: { suffix: "min" }
+      MaxSpeed: { suffix: "max" }
+
+  2791:  # CentralHeatingPumpStatus
+    type: "pump_sensor"
+    name: "Central Heating Pump Status"
+    device: "indoor"
+    subs:
+      Actual: { suffix: "current" }
+
+  2792:  # MixerOneCircuitPumpStatus
+    type: "pump_sensor"
+    name: "HC1 Pump Status"
+    device: "mixer"
+    subs:
+      Actual:
+        suffix: "current"
+        # 255 ist der Ungueltig-Marker (Kreis abgeschaltet), nicht 255 %
+        value_template: "{{ none if value | float(-1) > 100 else value }}"
+
+  2793:  # MixerTwoCircuitPumpStatus
+    type: "pump_sensor"
+    name: "HC2 Pump Status"
+    device: "mixer"
+    subs:
+      Actual:
+        suffix: "current"
+        value_template: "{{ none if value | float(-1) > 100 else value }}"
+
+  # --- Regelung (nur lesend: berechnete Ist-/Zielwerte, nicht verstellbar) ---
+  987:  # MixerOneCircuitFlowTemperatureTargetSetpoint
+    type: "temperature_sensor"
+    name: "HC1 Flow Target"
+    device: "mixer"
+
+  988:  # MixerTwoCircuitFlowTemperatureTargetSetpoint
+    type: "temperature_sensor"
+    name: "HC2 Flow Target"
+    device: "mixer"
+
+  1643:  # MixerOneCircuitCurrentTemperatureSetpoint
+    type: "temperature_sensor"
+    name: "HC1 Current Room Setpoint"
+    device: "mixer"
+
+  1644:  # MixerTwoCircuitCurrentTemperatureSetpoint
+    type: "temperature_sensor"
+    name: "HC2 Current Room Setpoint"
+    device: "mixer"
+
+  # --- Smart Grid / PV ---
+  543:  # SmartGridReadyConsolidator
+    # NICHT type "smart_grid": der ist als entity_type "multi_sensor" definiert,
+    # was keine gueltige HA-Discovery-Komponente ist. Der Generator expandiert
+    # sub_types nicht, HA verwirft solche Topics stillschweigend. Dasselbe
+    # Problem betrifft bereits 511/512 in common.yaml (vorbestehend).
+    type: "generic_sensor"
+    name: "SG Ready Consolidator"
+    device: "energy"
+    icon: "mdi:transmission-tower"
+    subs:
+      OperatingStatus: { suffix: "" }
+
+  2560:  # SmartGridFeatureSelection
+    type: "generic_sensor"
+    name: "Smart Grid Feature Selection"
+    device: "energy"
+    icon: "mdi:solar-power-variant"
+
+  2543:  # SmartGridTemperatureOffsets
+    type: "generic_sensor"
+    name: "Smart Grid Offsets"
+    device: "energy"
+    unit_of_measurement: "K"
+    state_class: "measurement"
+    icon: "mdi:solar-power-variant"
+    subs:
+      SetpointIncreaseBufferTemperatureHeating: { suffix: "buffer_heating" }
+      SetpointIncreaseRoomTemperatureHeating:   { suffix: "room_heating" }
+      SetpointIncreaseDHWTemperature:           { suffix: "dhw" }
+      SetpointDecreaseBufferTemperatureCooling: { suffix: "buffer_cooling" }
+      SetpointDecreaseRoomTemperatureCooling:   { suffix: "room_cooling" }
+
+  # --- Heizstab ---
+  2487:  # CurrentElectricalPowerConsumptionElectricHeater
+    type: "power_sensor"
+    name: "Electric Heater Power"
+    device: "heater"
+
+  2544:  # EnableElectricalHeaterSmartGridLock
+    type: "binary_onoff"
+    name: "Electric Heater SG Lock"
+    device: "heater"
+    payload_off: "0"
+    payload_on: "1"
+
+  2545:  # EnableElectricalHeaterSmartGridIncreaseMaxDemand
+    type: "binary_onoff"
+    name: "Electric Heater SG Max Demand"
+    device: "heater"
+    payload_off: "0"
+    payload_on: "1"
+
+  # --- Status und Stoerungen ---
+  901:  # ServiceManagerIsRequired
+    type: "binary_onoff"
+    name: "Service Required"
+    device: "indoor"
+    payload_off: "0"
+    payload_on: "1"
+
+  902:  # MalfunctionIdentification
+    type: "generic_sensor"
+    name: "Malfunction Code"
+    device: "indoor"
+    icon: "mdi:alert-circle-outline"
+
+  1731:  # ExternalLockActive
+    type: "binary_onoff"
+    name: "External Lock Active"
+    device: "indoor"
+    payload_off: "0"
+    payload_on: "1"
+
+  2256:  # DesiredThermalEnergyDefrost
+    type: "generic_sensor"
+    name: "Defrost Energy Demand"
+    device: "outdoor"
+    icon: "mdi:snowflake-melt"
+    state_class: "measurement"
+
+  # --- Energiezaehler (Grundlage fuer COP, DATA-02) ---
+  # Today/CurrentMonth/CurrentYear laufen innerhalb ihrer Periode hoch und
+  # werden zurueckgesetzt -> total_increasing. Past* sind Rueckblick-Werte,
+  # die springen koennen -> measurement.
+  548:  # EnergyConsumptionCentralHeating
+    type: "energy_sensor"
+    name: "Energy Central Heating"
+    device: "energy"
+    subs:
+      Today:        { suffix: "today" }
+      CurrentMonth: { suffix: "current_month" }
+      CurrentYear:  { suffix: "current_year" }
+      Past7Days:    { suffix: "past_7d",     state_class: "measurement" }
+      PastMonth:    { suffix: "past_month",  state_class: "measurement" }
+      PastYear:     { suffix: "past_year",   state_class: "measurement" }
+
+  565:  # EnergyConsumptionDomesticHotWater
+    type: "energy_sensor"
+    name: "Energy DHW"
+    device: "energy"
+    subs:
+      Today:        { suffix: "today" }
+      CurrentMonth: { suffix: "current_month" }
+      CurrentYear:  { suffix: "current_year" }
+      Past7Days:    { suffix: "past_7d",     state_class: "measurement" }
+      PastMonth:    { suffix: "past_month",  state_class: "measurement" }
+      PastYear:     { suffix: "past_year",   state_class: "measurement" }
+
+  566:  # EnergyConsumptionCooling
+    type: "energy_sensor"
+    name: "Energy Cooling"
+    device: "energy"
+    subs:
+      Today:        { suffix: "today" }
+      CurrentMonth: { suffix: "current_month" }
+      CurrentYear:  { suffix: "current_year" }
+      Past7Days:    { suffix: "past_7d",     state_class: "measurement" }
+      PastMonth:    { suffix: "past_month",  state_class: "measurement" }
+      PastYear:     { suffix: "past_year",   state_class: "measurement" }
+
+  2517:  # EnergyConsumptionDomesticHotWaterElectricHeater
+    type: "energy_sensor"
+    name: "Energy DHW Electric Heater"
+    device: "heater"
+    subs:
+      Today:        { suffix: "today" }
+      CurrentMonth: { suffix: "current_month" }
+      CurrentYear:  { suffix: "current_year" }
+      Past7Days:    { suffix: "past_7d",     state_class: "measurement" }
+      PastMonth:    { suffix: "past_month",  state_class: "measurement" }
+      PastYear:     { suffix: "past_year",   state_class: "measurement" }
+
+  2526:  # EnergyConsumptionCentralHeatingElectricHeater
+    type: "energy_sensor"
+    name: "Energy Central Heating Electric Heater"
+    device: "heater"
+    subs:
+      Today:        { suffix: "today" }
+      CurrentMonth: { suffix: "current_month" }
+      CurrentYear:  { suffix: "current_year" }
+      Past7Days:    { suffix: "past_7d",     state_class: "measurement" }
+      PastMonth:    { suffix: "past_month",  state_class: "measurement" }
+      PastYear:     { suffix: "past_year",   state_class: "measurement" }
