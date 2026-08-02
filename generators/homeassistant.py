@@ -182,6 +182,7 @@ class HomeAssistantGenerator(BaseGenerator):
             "name": name,
             "unique_id": unique_id,
             "object_id": entity_id,
+            "default_entity_id": self._default_entity_id(entity_type, entity_id),
             "device": self.create_device_info(ecu_addr),
             "availability_topic": "open3e/LWT",
             "payload_available": "online",
@@ -232,6 +233,7 @@ class HomeAssistantGenerator(BaseGenerator):
             'name': name,
             'unique_id': unique_id,
             'object_id': entity_id,
+            'default_entity_id': self._default_entity_id('climate', entity_id),
             'device': self.create_device_info_for_did(ecu_addr, did),
             'availability_topic': 'open3e/LWT',
             'payload_available': 'online',
@@ -287,6 +289,7 @@ class HomeAssistantGenerator(BaseGenerator):
             'name': name,
             'unique_id': unique_id,
             'object_id': entity_id,
+            'default_entity_id': self._default_entity_id('water_heater', entity_id),
             'device': self.create_device_info_for_did(ecu_addr, did),
             'availability_topic': 'open3e/LWT',
             'payload_available': 'online',
@@ -364,6 +367,19 @@ class HomeAssistantGenerator(BaseGenerator):
             prefix = f"test/{prefix}"
         return f"{prefix}/{entity_type}/{entity_id}/config"
 
+    @staticmethod
+    def _default_entity_id(entity_type: str, entity_id: str) -> str:
+        """FIX-01: gewuenschte entity_id fuer Home Assistant.
+
+        `object_id` wird von HA seit 2026.x bei Neuregistrierungen ignoriert — die
+        entity_id entsteht dann aus Bereich, Geraetename und Entitaetsname, z.B.
+        number.heizung_vitocal_252_a_heizkreismischer_heizkurve_heizkreis_1_steilheit.
+        `default_entity_id` erwartet die vollqualifizierte ID inklusive Domain.
+        `object_id` bleibt zusaetzlich erhalten, damit aeltere HA-Versionen weiter
+        bedient werden; beide Felder nebeneinander akzeptiert HA.
+        """
+        return f"{entity_type}.{entity_id}"
+
     def _build_entity_config(self, name: str, unique_id: str, entity_id: str, state_topic: str,
                            ecu_addr: str, template: dict[str, Any], dp_config: dict[str, Any],
                            did: int, entity_type: str = "sensor") -> dict[str, Any]:
@@ -372,6 +388,7 @@ class HomeAssistantGenerator(BaseGenerator):
             "name": name,
             "unique_id": unique_id,
             "object_id": entity_id,
+            "default_entity_id": self._default_entity_id(entity_type, entity_id),
             "device": self.create_device_info_for_did(ecu_addr, did),
             # Basic availability (expects open3e to publish LWT)
             "availability_topic": "open3e/LWT",

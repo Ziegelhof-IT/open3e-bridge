@@ -18,16 +18,34 @@ class TestPahoV2:
 
 
 # ---------------------------------------------------------------------------
-# 2. object_id: discovery config uses object_id, not default_entity_id
+# 2. FIX-01: discovery config sendet object_id UND default_entity_id
+#
+# HA >= 2026.x ignoriert object_id bei Neuregistrierungen und bildet die
+# entity_id aus Bereich, Geraetename und Entitaetsname. Nur default_entity_id
+# steuert sie noch. object_id bleibt fuer aeltere HA-Versionen erhalten.
+# Nachgewiesen an HA 2026.7.4 am 2026-08-02.
 # ---------------------------------------------------------------------------
 class TestDefaultEntityId:
-    def test_sensor_config_has_object_id(self, generator_de):
+    def test_sensor_config_has_both_id_fields(self, generator_de):
         topic = "open3e/680_274_OutsideTemperatureSensor/Actual"
         results = generator_de.generate_discovery_message(topic, "12.5", test_mode=False)
         assert results, "Expected at least one discovery message"
         config = json.loads(results[0][1])
-        assert "object_id" in config
-        assert "default_entity_id" not in config
+        assert config["object_id"] == "open3e_680_274_actual"
+        assert config["default_entity_id"] == "sensor.open3e_680_274_actual"
+
+    def test_default_entity_id_is_domain_qualified(self, generator_de):
+        """default_entity_id muss die Domain enthalten, sonst greift sie nicht."""
+        topic = "open3e/680_274_OutsideTemperatureSensor/Actual"
+        results = generator_de.generate_discovery_message(topic, "12.5", test_mode=False)
+        for topic_out, payload in results:
+            config = json.loads(payload)
+            if "default_entity_id" not in config:
+                continue
+            domain = topic_out.split("/")[-3]
+            assert config["default_entity_id"] == f"{domain}.{config['object_id']}", (
+                f"default_entity_id passt nicht zur Domain {domain}: {config['default_entity_id']}"
+            )
 
 
 # ---------------------------------------------------------------------------
