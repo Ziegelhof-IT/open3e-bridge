@@ -30,7 +30,9 @@ class TestDeviceInfoForDid:
         assert info["name"] == "Vitocal 252-A Auxiliary Heater"
 
     def test_energy_device(self, generator_en):
-        info = generator_en.create_device_info_for_did("680", 1603)
+        # 2543 statt des frueheren 1603: der gehoert zum Vitocharge VX3 und ist
+        # auf der Vitocal per ignored_dids stillgelegt.
+        info = generator_en.create_device_info_for_did("680", 2543)
         assert info["identifiers"] == ["open3e_680_energy"]
         assert info["name"] == "Energy Management"
 
@@ -74,7 +76,7 @@ class TestDeviceNameTranslation:
         assert info["name"] == "Vitocal 252-A Zusatzheizung"
 
     def test_energy_name_de(self, generator_de):
-        info = generator_de.create_device_info_for_did("680", 1603)
+        info = generator_de.create_device_info_for_did("680", 2543)
         assert info["name"] == "Energiemanagement"
 
     def test_indoor_name_de(self, generator_de):

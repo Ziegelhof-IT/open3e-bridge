@@ -100,19 +100,21 @@ def test_power_sensor_discovery(generator_en):
 
 
 # ---------------------------------------------------------------------------
-# TEST-01-4: Energy sensor (DID 535, sub GridSuppliedEnergy)
+# TEST-01-4: Energy sensor (DID 548, sub CurrentYear)
+# Frueher DID 535 — der ist auf der Vitocal per ignored_dids stillgelegt und
+# erzeugt deshalb bewusst keine Discovery mehr.
 # ---------------------------------------------------------------------------
 
 def test_energy_sensor_discovery(generator_en):
-    topic = "open3e/680_535_ObjectElectricalEnergyStatistical/GridSuppliedEnergy"
+    topic = "open3e/680_548_EnergyConsumptionCentralHeating/CurrentYear"
     disc_topic, p = _discover(generator_en, topic, "12345.6")
 
     assert "/sensor/" in disc_topic
     _assert_common_fields(
         p,
-        name="Electrical Energy Statistics GridSuppliedEnergy",
-        unique_id="open3e_680_535_gridsuppliedenergy",
-        entity_id="open3e_680_535_gridsuppliedenergy",
+        name="Energy Central Heating current_year",
+        unique_id="open3e_680_548_currentyear",
+        entity_id="open3e_680_548_currentyear",
         state_topic=topic,
     )
     assert p["device_class"] == "energy"
@@ -124,12 +126,29 @@ def test_energy_sensor_discovery(generator_en):
 # TEST DATA-03/05: Status DIDs
 # ---------------------------------------------------------------------------
 
-def test_four_way_valve_discovery(generator_en):
-    topic = "open3e/680_2335_FourWayValve"
-    disc_topic, p = _discover(generator_en, topic, "0")
+def test_four_three_way_valve_discovery(generator_en):
+    """Das hydraulische 4/3-Wegeventil ist DID 2735, nicht 2335.
+
+    Der frueher hier gepruefte DID 2335 war ein Zahlendreher. Upstream ist er
+    BatteryModuleCoulombCounters und auf einer Vitocal nicht vorhanden.
+    """
+    topic = "open3e/680_2735_FourThreeWayValveValveCurrentPosition"
+    disc_topic, p = _discover(generator_en, topic, "1")
     assert "/sensor/" in disc_topic
-    assert p["name"] == "Four-Way Valve"
+    assert p["name"] == "4/3-Way Valve Position"
     assert "value_template" in p
+
+
+def test_refrigerant_reversing_valve_discovery(generator_en):
+    """Kaeltekreis-Umkehrventil (Heizen/Abtauen) — eigene Groesse neben 2735."""
+    for did, name in ((1773, "Refrigerant Reversing Valve"),
+                      (3190, "Refrigerant Reversing Valve Position")):
+        topic = f"open3e/680_{did}_RefrigerantCircuitFourWayValve"
+        disc_topic, p = _discover(generator_en, topic, "0")
+        assert "/sensor/" in disc_topic
+        assert p["name"] == name
+        # Enum-Bedeutung ist upstream nicht dokumentiert — nichts raten
+        assert "value_template" not in p
 
 
 def test_compressor_speed_discovery(generator_en):
@@ -149,10 +168,18 @@ def test_primary_hx_temperature_discovery(generator_en):
     assert p["unit_of_measurement"] == "°C"
 
 
-def test_pv_power_generation_discovery(generator_en):
-    topic = "open3e/680_1834_PVPowerGeneration"
-    disc_topic, p = _discover(generator_en, topic, "2500")
-    assert "/sensor/" in disc_topic
-    assert p["device_class"] == "power"
-    assert p["unit_of_measurement"] == "W"
-    assert p["icon"] == "mdi:solar-power"
+def test_vitocharge_dids_are_ignored_on_vitocal(generator_en):
+    """DIDs des Vitocharge VX3 duerfen auf einer Vitocal keine Entitaet erzeugen.
+
+    1690/1834/2335 stehen in Open3EdatapointsVx3.py, nicht in einer
+    Vitocal-Tabelle. Ohne Batteriespeicher am E3-Bus antwortet die ECU mit
+    ConditionsNotCorrect (0x22) — der frueher hier erwartete PV-Leistungssensor
+    hat nie einen Wert geliefert.
+    """
+    for did in (535, 1603, 1690, 1834, 2335):
+        assert generator_en.is_ignored_did(did), f"DID {did} muesste ignoriert sein"
+
+
+def test_ignored_dids_keeps_inherited_540(generator_en):
+    """merge_config ersetzt ignored_dids komplett — 540 darf dabei nicht verloren gehen."""
+    assert generator_en.is_ignored_did(540)

@@ -86,14 +86,10 @@ datapoints:
     writable: true
     write_mode: "write"
 
-  535:
-    type: "energy_sensor"
-    name: "Electrical Energy Statistics"
-    device: "indoor"
-    subs:
-      GridSuppliedEnergy: { }
-      ProducedEnergy: { }
-      GridFeedInEnergy: { }
+  # DID 535 ObjectElectricalEnergyStatistical entfernt 2026-08-02: steht nicht in
+  # der vom Geraet gemeldeten DID-Liste (output/Open3Edatapoints_680.py), Lesen
+  # scheitert mit ConditionsNotCorrect (0x22). Siehe .planning/phases/
+  # 03-erweiterte-dids/03-DESIGN.md, Abschnitt "Korrektur 2026-08-02".
 
   377:
     type: "device_info"
@@ -163,12 +159,8 @@ datapoints:
     name: "Power Consumption (System)"
     device: "indoor"
 
-  1603:  # PointOfCommonCouplingPower
-    type: "power_sensor"
-    name: "Grid Active Power"
-    device: "energy"
-    subs:
-      ActivePower: { suffix: "current" }
+  # DID 1603 PointOfCommonCouplingPower entfernt 2026-08-02: Netzverknuepfungs-
+  # punkt eines Vitocharge VX3, auf dieser Anlage nicht vorhanden (0x22).
 
   # --- DHW Operation State + water_heater ---
   531:  # DomesticHotWaterOperationState
@@ -225,6 +217,24 @@ datapoints:
     payload_off: "0"
     payload_on: "1"
     trigger_sub: "PowerState"
+
+  # Umkehrventil des Kaeltekreises — schaltet zwischen Heizen und Abtauen bzw.
+  # Kuehlen. Nicht zu verwechseln mit dem hydraulischen 4/3-Wegeventil (DID 2735),
+  # das die Waerme auf Puffer/Heizkreis/Warmwasser verteilt.
+  # Upstream sind beide nur O3EByteVal ohne dokumentierte Enum-Bedeutung; deshalb
+  # bewusst kein value_template. Die Zuordnung der Zahlenwerte laesst sich erst
+  # ueber einen beobachteten Abtauzyklus belegen.
+  1773:  # RefrigerantCircuitFourWayValve
+    type: "generic_sensor"
+    name: "Refrigerant Reversing Valve"
+    device: "outdoor"
+    icon: "mdi:valve"
+
+  3190:  # RefrigerantCircuitFourWayValvePosition
+    type: "generic_sensor"
+    name: "Refrigerant Reversing Valve Position"
+    device: "outdoor"
+    icon: "mdi:valve"
 
   1775:  # PrimaryCircuitFanOne
     type: "pump_sensor"
@@ -370,18 +380,10 @@ datapoints:
         {{ value }}
       {% endif %}
 
-  2335:  # FourWayValve
-    type: "generic_sensor"
-    name: "Four-Way Valve"
-    device: "indoor"
-    icon: "mdi:valve"
-    value_template: >
-      {% set state = value | int %}
-      {% if state == 0 %}Heating
-      {% elif state == 1 %}Defrost
-      {% elif state == 2 %}DHW
-      {% elif state == 3 %}Cooling
-      {% else %}{{ value }}{% endif %}
+  # DID 2335 entfernt 2026-08-02. Der Eintrag war als "FourWayValve" gefuehrt, das
+  # war ein Zahlendreher: gemeint ist 2735. 2335 ist upstream
+  # RawCodec(8, "BatteryModuleCoulombCounters") und auf dieser Anlage nicht
+  # vorhanden (0x22). Die Enum-Uebersetzung ist nach 2735 gewandert.
 
   2346:  # CompressorSpeed (%)
     type: "pump_sensor"
@@ -396,17 +398,12 @@ datapoints:
     state_class: "measurement"
 
   # --- PV ---
-  1690:
-    type: "generic_sensor"
-    name: "PV Status"
-    device: "energy"
-    icon: "mdi:solar-power"
-
-  1834:
-    type: "power_sensor"
-    name: "PV Power Generation"
-    device: "energy"
-    icon: "mdi:solar-power"
+  # DIDs 1690 (ElectricalEnergySystemPhotovoltaicStatus) und 1834
+  # (ElectricalEnergyStorageStateOfEnergy) entfernt 2026-08-02: beide stehen in
+  # Open3EdatapointsVx3.py, gehoeren also zum Vitocharge VX3 und nicht zur
+  # Vitocal. Ohne Viessmann-Batteriespeicher am E3-Bus antwortet die ECU mit
+  # ConditionsNotCorrect (0x22). PV-Daten kommen in dieser Installation aus dem
+  # Wechselrichter direkt, nicht ueber den E3-Bus.
 
   # --- Room temperature setpoints (writable) ---
   # DID 424/426: O3EComplexType(9) — Comfort(2,s=10) + Standard(2,s=10) + Reduced(2,s=10) + Increased(2,s=10) + Duration(1)
@@ -886,11 +883,24 @@ datapoints:
     device: "outdoor"
 
   2735:  # FourThreeWayValveValveCurrentPosition
-    # Enum-Stellung (0-3), kein Prozentwert — daher generic statt valve_position
+    # Enum-Stellung, kein Prozentwert — daher generic statt valve_position.
+    # Uebersetzung nach dem Kommentar in Open3Edatapoints.py (0-4), nicht nach
+    # Discussion #54, die nur 0-3 kennt und "Defrost" fuer 1 nennt. Der Kommentar
+    # in der Codebasis, die wir tatsaechlich ausfuehren, hat Vorrang; das Abtauen
+    # laeuft ausserdem ueber das Kaeltekreis-Umkehrventil (1773/3190), nicht ueber
+    # dieses hydraulische Ventil.
     type: "generic_sensor"
     name: "4/3-Way Valve Position"
     device: "indoor"
     icon: "mdi:valve"
+    value_template: >
+      {% set state = value | int(-1) %}
+      {% if state == 0 %}Heizen/Kuehlen
+      {% elif state == 1 %}Interner Puffer
+      {% elif state == 2 %}Warmwasser
+      {% elif state == 3 %}Heizen/Kuehlen + Puffer
+      {% elif state == 4 %}Warmwasser + Puffer
+      {% else %}{{ value }}{% endif %}
 
   # --- Mischer-Ventile und Pumpen ---
   475:  # MixerOneCircuitThreeWayValvePositionPercent
@@ -1116,3 +1126,19 @@ datapoints:
       Past7Days:    { suffix: "past_7d",     state_class: "measurement" }
       PastMonth:    { suffix: "past_month",  state_class: "measurement" }
       PastYear:     { suffix: "past_year",   state_class: "measurement" }
+
+# DIDs, die eine Vitocal nicht fuehrt. Lesen scheitert mit
+# ConditionsNotCorrect (0x22), weil sie nicht in der vom Geraet gemeldeten
+# DID-Liste stehen. Sie bleiben in common.yaml/datapoints.yaml erhalten, weil
+# andere E3-Geraete sie sehr wohl haben.
+#
+# ACHTUNG: merge_config ersetzt diese Liste vollstaendig (generators/base.py:302),
+# es wird nicht angehaengt. Der Eintrag 540 aus common.yaml muss deshalb hier
+# wiederholt werden, sonst geht er verloren.
+ignored_dids:
+  - 540   # Device rejected read access
+  - 535   # ObjectElectricalEnergyStatistical — Vitocharge VX3
+  - 1603  # PointOfCommonCouplingPower — Vitocharge VX3
+  - 1690  # ElectricalEnergySystemPhotovoltaicStatus — Vitocharge VX3
+  - 1834  # ElectricalEnergyStorageStateOfEnergy — Vitocharge VX3
+  - 2335  # BatteryModuleCoulombCounters — Vitocharge VX3
