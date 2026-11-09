@@ -44,7 +44,32 @@ def test_on_connect_subscribes_ha_status(mock_bridge):
     bridge._on_connect(mock_client, None, {}, 0, None)
     subscribe_topics = [c[0][0] for c in mock_client.subscribe.call_args_list]
     assert "homeassistant/status" in subscribe_topics
-    assert "open3e/+/+" in subscribe_topics
+    # SUB-01: '#' matcht beliebig viele Ebenen — '+' hat verschachtelte
+    # Sub-Keys (z. B. .../Mode/ID) nie zugestellt bekommen.
+    assert "open3e/#" in subscribe_topics
+    assert "open3e/+/+" not in subscribe_topics
+
+
+@pytest.mark.parametrize("topic", [
+    "open3e/680_268_FlowTemperatureSensor/Actual",
+    "open3e/680_1415_MixerOneCircuitOperationState/Mode/ID",
+    "open3e/680_1416_MixerTwoCircuitOperationState/Mode/ID",
+    "open3e/6CF_2442_HeatPumpFrostProtection",
+])
+def test_on_connect_subscription_covers_nested_topics(mock_bridge, topic):
+    """SUB-01 regression: nested sub-keys must be covered by the subscription.
+
+    The old filters (open3e/+/+, open3e/+) silently dropped every topic with
+    more than one sub-level, so DID 1415/1416 never reached the bridge.
+    """
+    from paho.mqtt.client import topic_matches_sub
+
+    bridge, mock_client = mock_bridge
+    bridge._on_connect(mock_client, None, {}, 0, None)
+    subscribe_topics = [c[0][0] for c in mock_client.subscribe.call_args_list]
+    assert any(topic_matches_sub(sub, topic) for sub in subscribe_topics), (
+        f"no subscription in {subscribe_topics} matches {topic}"
+    )
 
 
 def test_on_connect_failure_logs_error(mock_bridge):

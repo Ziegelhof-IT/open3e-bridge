@@ -230,9 +230,11 @@ class Open3EBridge:
         if reason_code == 0:
             logger.info("Connected to MQTT broker")
             client.publish(self.lwt_topic, "online", qos=1, retain=True)
-            client.subscribe("open3e/+/+")
-            client.subscribe("open3e/+")
-            client.subscribe("open3e/LWT")
+            # SUB-01: '#' statt '+' — '+' matcht genau eine Ebene und liess
+            # verschachtelte Sub-Keys (z. B. .../Mode/ID bei DID 1415/1416)
+            # nie zugestellt werden. '#' ist eine echte Obermenge der bisherigen
+            # Filter (open3e/cmnd und open3e/LWT waren davon schon erfasst).
+            client.subscribe("open3e/#")
             # ROB-01: Re-publish discovery when HA restarts
             client.subscribe("homeassistant/status")
             logger.debug("Subscribed to open3e topics and homeassistant/status")
