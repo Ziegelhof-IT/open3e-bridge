@@ -199,3 +199,45 @@ class TestDeviceRegistryBridgeIntegration:
         devices = [DeviceConfig(name="vitocal", ecu="680", profile="vitocal")]
         reg = DeviceRegistry(devices, config_dir="config")
         assert reg.get_generator("999") is None
+
+
+class TestEcuNormalization:
+    """ECU addresses must match the reader's '{ecuAddr:03X}' topic format.
+
+    The reader publishes uppercase hex (e.g. '6CF'). Hand-written config files
+    routinely use lowercase or an '0x' prefix; without normalization the
+    registry lookup misses and messages silently fall back to the default
+    generator.
+    """
+
+    @pytest.mark.parametrize("written", ["6CF", "6cf", "0x6CF", "0x6cf", " 6cf "])
+    def test_config_spelling_variants_resolve_to_topic_form(self, written):
+        dc = DeviceConfig(name="wp", ecu=written, profile="vitocal")
+        assert dc.ecu == "6CF"
+
+    def test_lookup_is_case_insensitive(self):
+        devices = [DeviceConfig(name="wp", ecu="6cf", profile="vitocal")]
+        reg = DeviceRegistry(devices, config_dir="config")
+        # Topic form (uppercase) must hit even though config used lowercase
+        assert reg.get_generator("6CF") is not None
+        assert reg.get_generator("6cf") is not None
+        assert reg.ecu_addresses == ["6CF"]
+
+    def test_yaml_spelling_variants_collide_as_duplicates(self, tmp_path):
+        path = tmp_path / "devices.yaml"
+        path.write_text(yaml.safe_dump({"devices": [
+            {"name": "a", "ecu": "6cf", "profile": "vitocal"},
+            {"name": "b", "ecu": "0x6CF", "profile": "vitocal"},
+        ]}), encoding="utf-8")
+        with pytest.raises(ValueError, match="Duplicate ECU"):
+            DeviceRegistry.from_yaml(path, config_dir="config")
+
+    def test_yaml_lowercase_ecu_routes_uppercase_topic(self, tmp_path):
+        path = tmp_path / "devices.yaml"
+        path.write_text(yaml.safe_dump({"devices": [
+            {"name": "vitocal", "ecu": "680", "profile": "vitocal"},
+            {"name": "wp", "ecu": "6cf", "profile": "vitocal"},
+        ]}), encoding="utf-8")
+        reg = DeviceRegistry.from_yaml(path, config_dir="config")
+        assert reg.get_generator("6CF") is not None
+        assert reg.get_generator("6CF") is not reg.get_generator("680")

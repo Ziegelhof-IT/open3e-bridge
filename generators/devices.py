@@ -21,13 +21,30 @@ from .registry import get_generator_class
 logger = logging.getLogger("open3e_bridge.generators.devices")
 
 
+def normalize_ecu(ecu: str) -> str:
+    """Normalize an ECU address to its canonical topic form.
+
+    The Open3E reader formats addresses with ``{ecuAddr:03X}`` — uppercase hex,
+    e.g. ``6CF``. Config files are written by hand and routinely use lowercase
+    (``6cf``) or an ``0x`` prefix, which would silently miss the registry lookup
+    and route messages to the fallback generator.
+    """
+    ecu = str(ecu).strip()
+    if ecu.lower().startswith("0x"):
+        ecu = ecu[2:]
+    return ecu.upper()
+
+
 @dataclass
 class DeviceConfig:
     """Configuration for a single E3 device."""
     name: str
-    ecu: str  # hex string, e.g. "680"
+    ecu: str  # canonical uppercase hex string, e.g. "680" / "6CF"
     profile: str = "auto"
     extra: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        self.ecu = normalize_ecu(self.ecu)
 
 
 class DeviceRegistry:
@@ -74,8 +91,8 @@ class DeviceRegistry:
         return dict(self._generators)
 
     def get_generator(self, ecu_addr: str) -> Any | None:
-        """Get the generator for a specific ECU address."""
-        return self._generators.get(ecu_addr)
+        """Get the generator for a specific ECU address (case-insensitive)."""
+        return self._generators.get(normalize_ecu(ecu_addr))
 
     def get_default_generator(self) -> Any:
         """Return the first (or only) generator. Used for single-device compat."""
@@ -162,9 +179,8 @@ class DeviceRegistry:
             if not ecu:
                 raise ValueError(f"Device '{name}': 'ecu' is required")
 
-            # Normalize ECU: strip 0x prefix if present
-            if ecu.lower().startswith("0x"):
-                ecu = ecu[2:]
+            # Normalize ECU to the canonical topic form (uppercase, no 0x)
+            ecu = normalize_ecu(ecu)
 
             if ecu in seen_ecus:
                 raise ValueError(f"Duplicate ECU address '{ecu}' in devices config")

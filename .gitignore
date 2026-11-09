@@ -11,6 +11,7 @@ test_device.txt
 
 # User overrides (local, not committed)
 config/user/
+config/devices.yaml
 
 build/
 dist/
