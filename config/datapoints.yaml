@@ -428,6 +428,41 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
           {{ cmd | to_json }}
 
+  1193:  # MixerTwoCircuitFlowTemperatureMinimumMaximumLimit
+    type: "temperature_setpoint"
+    name: "Circuit 2 Flow Temperature"
+    device: "mixer"
+    subs:
+      Minimum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmax = min(max(states('sensor.1193_mixertwocircuitflowtemperature_maximum') | int * 10,100),600) %}
+          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1193, cmddata]]} %}
+          {{ cmd | to_json }}
+
+      Maximum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmin = min(max(states('sensor.1193_mixertwocircuitflowtemperature_minimum') | int * 10,100),600) %}
+          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1193, cmddata]]} %}
+          {{ cmd | to_json }}
+
   # Heating circuit 2 pump: Setpoint via 1103
   1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"

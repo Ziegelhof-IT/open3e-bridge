@@ -159,11 +159,23 @@ class TestUnconfiguredSubItem:
         assert result == []
 
     def test_unconfigured_sub_minimum_returns_empty(self, generator_en):
-        """Sub-items like Minimum/Maximum that are not in subs config are skipped."""
+        """Sub-items like Minimum/Maximum that are not in subs config are skipped.
+
+        DID 274 maps Actual and Average but deliberately not Minimum/Maximum:
+        the device leaves those two unpopulated (observed Max < Min), so they
+        would only produce misleading entities.
+        """
+        result = generator_en.generate_discovery_message(
+            "open3e/680_274_OutsideTemperatureSensor/Minimum", "10.0",
+        )
+        assert result == []
+
+    def test_configured_sub_minimum_works_where_device_populates_it(self, generator_en):
+        """Counterpart: DIDs whose device does populate Minimum expose it."""
         result = generator_en.generate_discovery_message(
             "open3e/680_271_DomesticHotWaterSensor/Minimum", "10.0",
         )
-        assert result == []
+        assert len(result) == 1
 
     def test_configured_sub_still_works(self, generator_en):
         """Configured sub-item (Actual) still produces discovery."""

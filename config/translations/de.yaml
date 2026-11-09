@@ -134,6 +134,11 @@ modes:
   "performance": "Leistung"
 
 sub_items:
+  # Sub-Items mit suffix: "" tragen ihren eigenen Namen als Label. Ohne Eintrag
+  # hier steht das englische Original in der deutschen Oberflaeche
+  # (z. B. "Warmwasser Actual" neben "Warmwasser Minimum").
+  "Actual": "Aktuell"
+  "OperatingStatus": "Betriebsstatus"
   "Comfort": "Komfort"
   "Standard": "Standard"
   "Reduced": "Reduziert"

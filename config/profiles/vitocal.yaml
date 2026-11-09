@@ -30,6 +30,9 @@ datapoints:
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
 
   269:
     type: "temperature_sensor"
@@ -37,6 +40,9 @@ datapoints:
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
 
   274:
     type: "temperature_sensor"
@@ -44,6 +50,9 @@ datapoints:
     device: "outdoor"
     subs:
       Actual: { suffix: "current" }
+      # Minimum/Maximum meldet die Anlage hier ungepflegt (Max < Min),
+      # nur der Durchschnitt ist brauchbar.
+      Average: { suffix: "avg" }
 
   318:
     type: "pressure_sensor"
@@ -51,6 +60,9 @@ datapoints:
     device: "indoor"
     subs:
       Actual: { suffix: "current" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
 
   381:
     type: "pump_sensor"
@@ -75,6 +87,9 @@ datapoints:
     device: "tank"
     subs:
       Actual: { suffix: "" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
 
   396:
     type: "temperature_setpoint"
@@ -140,6 +155,9 @@ datapoints:
     device: "mixer"
     subs:
       Actual: { suffix: "current" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
 
   3016:  # HeatingBufferTemperatureSensor
     type: "temperature_sensor"
@@ -147,6 +165,9 @@ datapoints:
     device: "tank"
     subs:
       Actual: { suffix: "" }
+      Minimum: { suffix: "min" }
+      Maximum: { suffix: "max" }
+      Average: { suffix: "avg" }
 
   # --- Power and thermal capacity ---
   2496:  # CurrentThermalCapacitySystem (W)
@@ -199,6 +220,10 @@ datapoints:
     device: "outdoor"
     payload_off: "0"
     payload_on: "1"
+    # BIN-01: Dieser DID wird als Float publiziert ("0.0"/"1.0"). Ohne
+    # Normalisierung matcht der Rohwert weder payload_on noch payload_off,
+    # und die Entity bleibt in HA dauerhaft 'unknown'.
+    value_template: "{{ 1 if (value | float(0)) > 0.5 else 0 }}"
 
   401:  # MixerOneCircuitPump
     type: "binary_onoff"
@@ -750,6 +775,16 @@ datapoints:
           {% set cmddata = '14' + '%02x' % intvalue + '%02x' % intvalue %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1102, cmddata]]} %}
           {{ cmd | to_json }}
+      MinSpeed:
+        entity_type: "sensor"
+        suffix: "min"
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
+      MaxSpeed:
+        entity_type: "sensor"
+        suffix: "max"
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
 
   1192:  # MixerOneCircuitFlowTemperatureMinimumMaximumLimit
     type: "temperature_setpoint"
@@ -786,6 +821,41 @@ datapoints:
           {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
           {{ cmd | to_json }}
 
+  1193:  # MixerTwoCircuitFlowTemperatureMinimumMaximumLimit
+    type: "temperature_setpoint"
+    name: "Circuit 2 Flow Temperature"
+    device: "mixer"
+    subs:
+      Minimum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmax = min(max(states('sensor.1193_mixertwocircuitflowtemperature_maximum') | int * 10,100),600) %}
+          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1193, cmddata]]} %}
+          {{ cmd | to_json }}
+
+      Maximum:
+        entity_type: "number"
+        writable: true
+        min: 10
+        max: 60
+        step: 1
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        command_template: >
+          {% set flowmin = min(max(states('sensor.1193_mixertwocircuitflowtemperature_minimum') | int * 10,100),600) %}
+          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
+          {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
+          {% set cmd = {'mode': 'write-raw', 'data': [[1193, cmddata]]} %}
+          {{ cmd | to_json }}
+
   1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"
     name: "Circuit 2 Pump"
@@ -804,6 +874,16 @@ datapoints:
           {% set cmddata = '1464' + '%02x' % intvalue %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1103, cmddata]]} %}
           {{ cmd | to_json }}
+      MinSpeed:
+        entity_type: "sensor"
+        suffix: "min"
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
+      MaxSpeed:
+        entity_type: "sensor"
+        suffix: "max"
+        unit_of_measurement: "%"
+        icon: "mdi:pump"
 
   # ==================================================================
   # Phase 3 — Erweiterte DIDs (2026-08-02)
