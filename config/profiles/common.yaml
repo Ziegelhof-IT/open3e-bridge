@@ -130,6 +130,11 @@ datapoints:
   # --- Error / DTC lists (Phase 1.3) ---
   257:  # StatusDtcList
     type: "error_list"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "Status List"
     device: "system"
     icon: "mdi:alert-circle-outline"
@@ -159,6 +164,11 @@ datapoints:
   # DHW schedules (Monday-Sunday)
   691:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Monday"
     device: "dhw"
     writable: true
@@ -181,6 +191,11 @@ datapoints:
       {{ cmd | to_json }}
   692:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Tuesday"
     device: "dhw"
     writable: true
@@ -197,6 +212,11 @@ datapoints:
       {{ cmd | to_json }}
   693:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Wednesday"
     device: "dhw"
     writable: true
@@ -213,6 +233,11 @@ datapoints:
       {{ cmd | to_json }}
   694:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Thursday"
     device: "dhw"
     writable: true
@@ -229,6 +254,11 @@ datapoints:
       {{ cmd | to_json }}
   695:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Friday"
     device: "dhw"
     writable: true
@@ -245,6 +275,11 @@ datapoints:
       {{ cmd | to_json }}
   696:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Saturday"
     device: "dhw"
     writable: true
@@ -261,6 +296,11 @@ datapoints:
       {{ cmd | to_json }}
   697:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "DHW Schedule Sunday"
     device: "dhw"
     writable: true
@@ -279,6 +319,11 @@ datapoints:
   # Heating circuit 1 schedules (Monday-Sunday)
   761:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Monday"
     device: "circuit"
     writable: true
@@ -295,6 +340,11 @@ datapoints:
       {{ cmd | to_json }}
   762:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Tuesday"
     device: "circuit"
     writable: true
@@ -311,6 +361,11 @@ datapoints:
       {{ cmd | to_json }}
   763:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Wednesday"
     device: "circuit"
     writable: true
@@ -327,6 +382,11 @@ datapoints:
       {{ cmd | to_json }}
   764:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Thursday"
     device: "circuit"
     writable: true
@@ -343,6 +403,11 @@ datapoints:
       {{ cmd | to_json }}
   765:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Friday"
     device: "circuit"
     writable: true
@@ -359,6 +424,11 @@ datapoints:
       {{ cmd | to_json }}
   766:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Saturday"
     device: "circuit"
     writable: true
@@ -375,6 +445,11 @@ datapoints:
       {{ cmd | to_json }}
   767:
     type: "schedule_edit"
+    # SUB-02: Der Reader splittet diesen DID in viele Sub-Topics
+    # (Count, Schedules/0/Start, ...). Ohne trigger_sub wuerde jedes
+    # davon die Discovery neu erzeugen und state_topic auf ein
+    # beliebiges Tiefen-Topic umbiegen.
+    trigger_sub: "Count"
     name: "HK1 Schedule Sunday"
     device: "circuit"
     writable: true

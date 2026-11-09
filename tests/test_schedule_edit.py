@@ -130,3 +130,45 @@ class TestScheduleEditVitocal:
         gen = HomeAssistantGenerator(config_dir=CONFIG_DIR, language="en", profile="vitocal")
         dp = gen.datapoints["datapoints"][691]
         assert dp["writable"] is True
+
+
+class TestScheduleTriggerSub:
+    """SUB-02: only the 'Count' sub-item may drive discovery.
+
+    The reader splits these DIDs into many sub-topics (Count, Schedules/0/Start,
+    Schedules/0/Mode, ...). Every sub-topic that reaches the generator rebuilds
+    the discovery config and sets state_topic to whatever arrived last, so
+    without an explicit trigger_sub the entity ends up pointing at an arbitrary
+    deep topic instead of the DID root.
+    """
+
+    DEEP_SUBS = ["Schedules/0/Start", "Schedules/0/Stop", "Schedules/0/Mode",
+                 "Schedules/0/Unknown"]
+
+    def _gen(self):
+        return HomeAssistantGenerator(config_dir=CONFIG_DIR, language="en",
+                                      discovery_prefix="homeassistant",
+                                      add_test_prefix=False, profile="common")
+
+    def test_count_sub_item_generates_discovery(self):
+        gen = self._gen()
+        out = gen.generate_discovery_message(
+            "open3e/680_691_DomesticHotWaterTimeScheduleMonday/Count", "1", test_mode=False)
+        assert out, "Count must generate discovery"
+        cfg = json.loads(out[0][1])
+        assert cfg["state_topic"].endswith("/Count")
+
+    def test_deep_sub_items_generate_nothing(self):
+        gen = self._gen()
+        for did in (691, 697, 761, 767):
+            for sub in self.DEEP_SUBS:
+                topic = f"open3e/680_{did}_Schedule/{sub}"
+                out = gen.generate_discovery_message(topic, "0", test_mode=False)
+                assert out == [], f"{topic} must not generate discovery, got {out}"
+
+    def test_status_list_deep_sub_items_generate_nothing(self):
+        gen = self._gen()
+        for sub in ("ListEntries/0/State/ID", "ListEntries/0/DateTime/Timestamp",
+                    "ListEntries/0/Unknown"):
+            topic = f"open3e/680_257_StatusDtcList/{sub}"
+            assert gen.generate_discovery_message(topic, "0", test_mode=False) == []
