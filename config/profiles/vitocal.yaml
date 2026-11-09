@@ -800,11 +800,14 @@ datapoints:
         unit_of_measurement: "°C"
         icon: "mdi:thermometer"
         command_template: >
-          {% set flowmax = min(max(states('sensor.1192_mixeronecircuitflowtemperature_maximum') | int * 10,100),600) %}
-          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
+          {% set other = states('number.open3e_680_1192_maximum') %}
+          {% if other | float(none) is not none %}
+          {% set flowmax = min(max((other | float * 10) | int, 100), 600) %}
+          {% set flowmin = min(max((value | float * 10) | int, 100), flowmax) %}
           {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
           {{ cmd | to_json }}
+          {% endif %}
 
       Maximum:
         entity_type: "number"
@@ -815,11 +818,14 @@ datapoints:
         unit_of_measurement: "°C"
         icon: "mdi:thermometer"
         command_template: >
-          {% set flowmin = min(max(states('sensor.1192_mixeronecircuitflowtemperature_minimum') | int * 10,100),600) %}
-          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
+          {% set other = states('number.open3e_680_1192_minimum') %}
+          {% if other | float(none) is not none %}
+          {% set flowmin = min(max((other | float * 10) | int, 100), 600) %}
+          {% set flowmax = min(max((value | float * 10) | int, flowmin), 600) %}
           {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1192, cmddata]]} %}
           {{ cmd | to_json }}
+          {% endif %}
 
   1193:  # MixerTwoCircuitFlowTemperatureMinimumMaximumLimit
     type: "temperature_setpoint"
@@ -835,11 +841,14 @@ datapoints:
         unit_of_measurement: "°C"
         icon: "mdi:thermometer"
         command_template: >
-          {% set flowmax = min(max(states('sensor.1193_mixertwocircuitflowtemperature_maximum') | int * 10,100),600) %}
-          {% set flowmin = min(max(value*10 | int, 100), flowmax) %}
+          {% set other = states('number.open3e_680_1193_maximum') %}
+          {% if other | float(none) is not none %}
+          {% set flowmax = min(max((other | float * 10) | int, 100), 600) %}
+          {% set flowmin = min(max((value | float * 10) | int, 100), flowmax) %}
           {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1193, cmddata]]} %}
           {{ cmd | to_json }}
+          {% endif %}
 
       Maximum:
         entity_type: "number"
@@ -850,11 +859,14 @@ datapoints:
         unit_of_measurement: "°C"
         icon: "mdi:thermometer"
         command_template: >
-          {% set flowmin = min(max(states('sensor.1193_mixertwocircuitflowtemperature_minimum') | int * 10,100),600) %}
-          {% set flowmax = min(max(value*10 | int, flowmin), 600) %}
+          {% set other = states('number.open3e_680_1193_minimum') %}
+          {% if other | float(none) is not none %}
+          {% set flowmin = min(max((other | float * 10) | int, 100), 600) %}
+          {% set flowmax = min(max((value | float * 10) | int, flowmin), 600) %}
           {% set cmddata = '%02x' % (flowmin % 256) + '%02x' % (flowmin // 256) + '%02x' % (flowmax % 256) + '%02x' % (flowmax // 256) + '000000000000' %}
           {% set cmd = {'mode': 'write-raw', 'data': [[1193, cmddata]]} %}
           {{ cmd | to_json }}
+          {% endif %}
 
   1103:  # MixerTwoCircuitPumpMinimumMaximumLimit
     type: "pump_sensor"

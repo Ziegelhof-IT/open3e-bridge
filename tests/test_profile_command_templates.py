@@ -90,6 +90,112 @@ class TestSelfReferenceIntegrity:
         )
 
 
+STATES_REF = re.compile(r"states\('([^']+)'\)")
+# Seit FIX-01 setzt die Bridge default_entity_id = open3e_<ecu>_<did>_<suffix>.
+ENTITY_SCHEME = re.compile(
+    r"(number|sensor|select|text|binary_sensor|switch|climate)\.open3e_[0-9a-f]+_\d+_[a-z0-9_]+"
+)
+
+# Gleiche Fehlerklasse, andere Reparatur: Die climate-Templates von 1415/1416
+# brauchen den Namen des aktiven Heizprogramms (Komfort/Reduziert/...), den es
+# unter dem neuen Schema so nicht gibt. Separat zu loesen; strict, damit der
+# Test anschlaegt, sobald es behoben ist.
+KNOWN_STALE_REFS = {
+    ("vitocal.yaml", 1415, "sensor.1415_mixeronecircuitoperationstate"),
+    ("vitocal.yaml", 1416, "sensor.1416_mixertwocircuitoperationstate"),
+}
+
+
+def _all_template_strings(node):
+    """Alle *_template-Strings eines Datenpunkts, auch in climate/water_heater-Bloecken."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if isinstance(value, str) and key.endswith("_template"):
+                yield value
+            else:
+                yield from _all_template_strings(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _all_template_strings(item)
+
+
+def _state_refs():
+    for path in _profiles():
+        for did, dp in _datapoints(path).items():
+            for tmpl in _all_template_strings(dp):
+                for ref in STATES_REF.findall(tmpl):
+                    param = (path.name, int(did), ref)
+                    marks = (
+                        [pytest.mark.xfail(strict=True, reason="bekannte Altlast, separat")]
+                        if param in KNOWN_STALE_REFS else []
+                    )
+                    yield pytest.param(*param, marks=marks, id=f"{path.name}-{did}-{ref}")
+
+
+def _render_ha(template_str, states_map, **kwargs):
+    """Rendert wie HA: eine unbekannte Entity liefert 'unknown', keinen Fehler.
+
+    Rueckgabe ist der Rohtext — ein leerer String heisst, HA sendet nichts.
+    """
+    env = _env()
+    env.globals["states"] = lambda eid: states_map.get(eid, "unknown")
+    # HA stellt min/max als Template-Globals bereit, Jinja selbst nicht.
+    env.globals["min"] = min
+    env.globals["max"] = max
+    return env.from_string(template_str).render(**kwargs).strip()
+
+
+class TestStateReferencesUseEntityScheme:
+    """Jeder states()-Verweis muss auf das aktuelle Entity-Schema zeigen.
+
+    TestSelfReferenceIntegrity prueft nur Verweise, die schon dem Schema folgen.
+    Ein Verweis im Altformat (sensor.1192_mixer...) faellt dort durchs Raster —
+    so blieb der 1192/1193-Fehler unbemerkt.
+    """
+
+    @pytest.mark.parametrize("profile,did,ref", list(_state_refs()))
+    def test_reference_follows_entity_scheme(self, profile, did, ref):
+        assert ENTITY_SCHEME.fullmatch(ref), (
+            f"{profile} DID {did} liest {ref!r} — diese Entity-ID entspricht nicht "
+            f"dem Schema <domain>.open3e_<ecu>_<did>_<suffix> und existiert in HA nicht."
+        )
+
+
+class TestFlowLimitRoundtrip:
+    """DID 1192/1193: Schreiben von Minimum darf Maximum nicht veraendern und umgekehrt.
+
+    Regression: Die Templates lasen sensor.119x_mixer...flowtemperature_* — Entity-IDs
+    aus der Zeit vor FIX-01. 'unknown' | int ergab 0, die Klemmung machte daraus
+    100 (= 10,0 °C): Ein Schreiben von Minimum setzte Maximum still auf 10 °C.
+    """
+
+    @pytest.fixture
+    def vitocal(self):
+        return _datapoints(PROFILES_DIR / "vitocal.yaml")
+
+    @pytest.mark.parametrize("did", [1192, 1193])
+    def test_minimum_write_preserves_maximum(self, vitocal, did):
+        tmpl = vitocal[did]["subs"]["Minimum"]["command_template"]
+        out = _render_ha(tmpl, {f"number.open3e_680_{did}_maximum": "40.0"}, value=20)
+        # min 20,0 °C = 200 = c8 00, max 40,0 °C = 400 = 90 01, 6 Byte Unknown
+        assert json.loads(out) == {"mode": "write-raw", "data": [[did, "c8009001000000000000"]]}
+
+    @pytest.mark.parametrize("did", [1192, 1193])
+    def test_maximum_write_preserves_minimum(self, vitocal, did):
+        tmpl = vitocal[did]["subs"]["Maximum"]["command_template"]
+        out = _render_ha(tmpl, {f"number.open3e_680_{did}_minimum": "20.0"}, value=45)
+        # min 20,0 °C = c8 00, max 45,0 °C = 450 = c2 01
+        assert json.loads(out) == {"mode": "write-raw", "data": [[did, "c800c201000000000000"]]}
+
+    @pytest.mark.parametrize("did", [1192, 1193])
+    @pytest.mark.parametrize("sub", ["Minimum", "Maximum"])
+    def test_unknown_sibling_sends_nothing(self, vitocal, did, sub):
+        """Ist der Geschwisterwert unbekannt (z. B. nach HA-Neustart), lieber
+        nichts senden als einen geratenen Wert auf die Anlage schreiben."""
+        tmpl = vitocal[did]["subs"][sub]["command_template"]
+        assert _render_ha(tmpl, {}, value=30) == ""
+
+
 class TestHeatingCurveRoundtrip:
     """DID 880/881: Schreiben eines Sub-Werts darf den anderen nicht veraendern."""
 
