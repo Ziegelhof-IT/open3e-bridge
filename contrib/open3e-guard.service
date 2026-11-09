@@ -1,0 +1,29 @@
+[Unit]
+Description=Open3E Guard — unabhaengige Rueckstellinstanz fuer die PV-Warmwasserladung
+Documentation=file:///home/szalusko/Ziegelhof/homelab/homeassistant/docs/plan-ww-pv-ladung.md
+After=network-online.target open3e-reader.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/open3e/open3e_guard.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+# Der Guard liest die Broker-Credentials aus /etc/open3e/mqtt.args (600,
+# hillbicks:hillbicks). Er laeuft deshalb als derselbe Benutzer wie
+# open3e-reader.service — nicht als root.
+User=hillbicks
+Group=hillbicks
+
+# Hardening: der Dienst braucht nur Netz und eine Datei aus /etc.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/etc/open3e
+
+[Install]
+WantedBy=multi-user.target
